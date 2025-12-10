@@ -18,7 +18,8 @@ function App() {
       body: JSON.stringify({ code })
     })
     const data = await res.json()
-    setOutput(data.success ? data.stdout : `Error: ${data.error}`)
+    const result = data.success ? data.stdout : `Error: ${data.error}`
+    setOutput(prev => prev ? `${prev}\n---\n${result}` : result)
   }
 
   return (
