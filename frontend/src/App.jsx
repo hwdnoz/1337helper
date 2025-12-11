@@ -1,4 +1,8 @@
 import { useState, useEffect } from 'react'
+import Editor from 'react-simple-code-editor'
+import { highlight, languages } from 'prismjs/components/prism-core'
+import 'prismjs/components/prism-python'
+import 'prismjs/themes/prism-dark.css'
 import './App.css'
 
 function App() {
@@ -28,7 +32,20 @@ function App() {
       <div className="container">
         <div>
           <button onClick={runCode}>RUN</button>
-          <textarea value={code} onChange={e => setCode(e.target.value)} />
+          <Editor
+            value={code}
+            onValueChange={setCode}
+            highlight={code => highlight(code, languages.python, 'python')}
+            padding={16}
+            style={{
+              fontFamily: 'monospace',
+              fontSize: 14,
+              backgroundColor: '#1e1e1e',
+              color: '#d4d4d4',
+              border: '1px solid #3e3e42',
+              minHeight: 'calc(100% - 40px)'
+            }}
+          />
         </div>
         <pre>{output}</pre>
       </div>

@@ -40,17 +40,6 @@ button:hover {
   background: #1177bb;
 }
 
-textarea {
-  width: 100%;
-  height: calc(100% - 40px);
-  background: #1e1e1e;
-  color: #d4d4d4;
-  border: 1px solid #3e3e42;
-  padding: 1rem;
-  font-family: monospace;
-  font-size: 14px;
-  resize: none;
-}
 
 pre {
   background: #1e1e1e;
