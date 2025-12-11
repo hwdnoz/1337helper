@@ -1,19 +1,26 @@
-import { useState, useEffect } from 'react'
-import Editor from 'react-simple-code-editor'
-import { highlight, languages } from 'prismjs/components/prism-core'
-import 'prismjs/components/prism-python'
-import 'prismjs/themes/prism-dark.css'
+import { useState, useEffect, useRef } from 'react'
+import CodeMirror from '@uiw/react-codemirror'
+import { python } from '@codemirror/lang-python'
+import { vim } from '@replit/codemirror-vim'
 import './App.css'
 
 function App() {
   const [code, setCode] = useState('')
   const [output, setOutput] = useState('')
+  const [vimEnabled, setVimEnabled] = useState(true)
+  const outputRef = useRef(null)
 
   useEffect(() => {
     fetch('http://localhost:5001/api/code')
       .then(res => res.json())
       .then(data => setCode(data.code || ''))
   }, [])
+
+  useEffect(() => {
+    if (outputRef.current) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight
+    }
+  }, [output])
 
   const runCode = async () => {
     const res = await fetch('http://localhost:5001/api/run', {
@@ -31,23 +38,33 @@ function App() {
       <h1>Code Runner</h1>
       <div className="container">
         <div>
-          <button onClick={runCode}>RUN</button>
-          <Editor
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={vimEnabled}
+                onChange={e => setVimEnabled(e.target.checked)}
+                style={{ cursor: 'pointer' }}
+              />
+              Vim
+            </label>
+            <button onClick={runCode}>RUN</button>
+          </div>
+          <CodeMirror
             value={code}
-            onValueChange={setCode}
-            highlight={code => highlight(code, languages.python, 'python')}
-            padding={16}
-            style={{
-              fontFamily: 'monospace',
-              fontSize: 14,
-              backgroundColor: '#1e1e1e',
-              color: '#d4d4d4',
-              border: '1px solid #3e3e42',
-              minHeight: 'calc(100% - 40px)'
+            onChange={setCode}
+            extensions={vimEnabled ? [python(), vim()] : [python()]}
+            theme="dark"
+            basicSetup={{
+              lineNumbers: true,
+              highlightActiveLineGutter: true,
+              highlightActiveLine: true,
+              foldGutter: true
             }}
+            style={{ fontSize: 14, height: 'calc(100% - 40px)' }}
           />
         </div>
-        <pre>{output}</pre>
+        <pre ref={outputRef}>{output}</pre>
       </div>
     </div>
   )
