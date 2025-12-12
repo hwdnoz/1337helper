@@ -64,7 +64,10 @@ function App() {
             style={{ fontSize: 14, height: 'calc(100% - 40px)' }}
           />
         </div>
-        <pre ref={outputRef}>{output}</pre>
+        <div>
+          <div style={{ marginBottom: '0.5rem', color: '#d4d4d4' }}>Output</div>
+          <pre ref={outputRef} style={{ height: 'calc(100% - 30px)' }}>{output}</pre>
+        </div>
       </div>
     </div>
   )
