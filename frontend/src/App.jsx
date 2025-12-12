@@ -39,16 +39,16 @@ function App() {
       <div className="container">
         <div>
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={vimEnabled}
-                onChange={e => setVimEnabled(e.target.checked)}
-                style={{ cursor: 'pointer' }}
-              />
-              Vim
-            </label>
-            <button onClick={runCode}>RUN</button>
+            <button
+              onClick={() => setVimEnabled(!vimEnabled)}
+              style={{
+                background: vimEnabled ? '#0e639c' : '#555',
+                opacity: vimEnabled ? 1 : 0.6
+              }}
+            >
+              {vimEnabled ? '✓ ' : ''}Vim
+            </button>
+            <button onClick={runCode}>Run</button>
           </div>
           <CodeMirror
             value={code}
