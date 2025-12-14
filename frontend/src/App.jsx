@@ -34,16 +34,29 @@ function App() {
     setOutput(prev => prev ? `${prev}\n---\n${result}` : result)
   }
 
-  const runTestCase = async () => {
-    const testCode = code + '\n\n' + testCase
-    const res = await fetch('http://localhost:5001/api/run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: testCode })
-    })
-    const data = await res.json()
-    const result = data.success ? data.stdout : `Error: ${data.error}`
-    setOutput(prev => prev ? `${prev}\n---\n${result}` : result)
+  const importTestCase = () => {
+    // Find if __name__ == '__main__' block and insert test case there
+    const lines = code.split('\n')
+    let mainBlockIndex = -1
+
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes("if __name__")) {
+        mainBlockIndex = i
+        break
+      }
+    }
+
+    if (mainBlockIndex === -1) {
+      // No main block exists, add one at the end
+      const newCode = code + '\n\nif __name__ == "__main__":\n    ' + testCase.split('\n').join('\n    ')
+      setCode(newCode)
+    } else {
+      // Insert after the if __name__ line
+      const indent = '    '
+      const indentedTestCase = testCase.split('\n').map(line => indent + line).join('\n')
+      lines.splice(mainBlockIndex + 1, 0, indentedTestCase)
+      setCode(lines.join('\n'))
+    }
   }
 
   return (
@@ -56,10 +69,7 @@ function App() {
         marginBottom: '1rem',
         borderRadius: '2px'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-          <div style={{ fontWeight: 'bold' }}>Test Case</div>
-          <button onClick={runTestCase} style={{ padding: '0.3rem 1rem' }}>Run Test Case</button>
-        </div>
+        <div style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>Test Case</div>
         <textarea
           value={testCase}
           onChange={e => setTestCase(e.target.value)}
@@ -90,6 +100,7 @@ function App() {
               {vimEnabled ? '✓ ' : ''}Vim
             </button>
             <button onClick={runCode}>Run</button>
+            <button onClick={importTestCase}>Import Test Cases</button>
           </div>
           <CodeMirror
             value={code}
