@@ -8,6 +8,7 @@ function App() {
   const [code, setCode] = useState('')
   const [output, setOutput] = useState('')
   const [vimEnabled, setVimEnabled] = useState(true)
+  const [testCase, setTestCase] = useState('addends = two_sum([2, 7, 11, 15], 9)\nprint(addends)')
   const outputRef = useRef(null)
 
   useEffect(() => {
@@ -33,9 +34,49 @@ function App() {
     setOutput(prev => prev ? `${prev}\n---\n${result}` : result)
   }
 
+  const runTestCase = async () => {
+    const testCode = code + '\n\n' + testCase
+    const res = await fetch('http://localhost:5001/api/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: testCode })
+    })
+    const data = await res.json()
+    const result = data.success ? data.stdout : `Error: ${data.error}`
+    setOutput(prev => prev ? `${prev}\n---\n${result}` : result)
+  }
+
   return (
     <div className="app">
       <h1>Code Runner</h1>
+      <div style={{
+        background: '#1e1e1e',
+        border: '1px solid #3e3e42',
+        padding: '1rem',
+        marginBottom: '1rem',
+        borderRadius: '2px'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+          <div style={{ fontWeight: 'bold' }}>Test Case</div>
+          <button onClick={runTestCase} style={{ padding: '0.3rem 1rem' }}>Run Test Case</button>
+        </div>
+        <textarea
+          value={testCase}
+          onChange={e => setTestCase(e.target.value)}
+          style={{
+            width: '100%',
+            minHeight: '60px',
+            background: '#2d2d2d',
+            color: '#d4d4d4',
+            border: '1px solid #3e3e42',
+            borderRadius: '2px',
+            padding: '0.5rem',
+            fontFamily: 'monospace',
+            fontSize: '0.9rem',
+            resize: 'vertical'
+          }}
+        />
+      </div>
       <div className="container">
         <div>
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
