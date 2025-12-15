@@ -59,6 +59,39 @@ function App() {
     }
   }
 
+  const clearTestCases = () => {
+    // Remove content from __name__ == '__main__' block
+    const lines = code.split('\n')
+    let mainBlockIndex = -1
+
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes("if __name__")) {
+        mainBlockIndex = i
+        break
+      }
+    }
+
+    if (mainBlockIndex === -1) {
+      // No main block exists, nothing to clear
+      return
+    }
+
+    // Find the end of the main block (next non-indented line or end of file)
+    let endIndex = lines.length
+    for (let i = mainBlockIndex + 1; i < lines.length; i++) {
+      const line = lines[i]
+      // If we hit a non-empty line that's not indented, we've left the main block
+      if (line.trim() && !line.startsWith('    ') && !line.startsWith('\t')) {
+        endIndex = i
+        break
+      }
+    }
+
+    // Remove all lines between mainBlockIndex + 1 and endIndex
+    lines.splice(mainBlockIndex + 1, endIndex - mainBlockIndex - 1)
+    setCode(lines.join('\n'))
+  }
+
   return (
     <div className="app">
       <h1>Code Runner</h1>
@@ -101,6 +134,7 @@ function App() {
             </button>
             <button onClick={runCode}>Run</button>
             <button onClick={importTestCase}>Import Test Cases</button>
+            <button onClick={clearTestCases}>Clear Test Cases</button>
           </div>
           <CodeMirror
             value={code}
