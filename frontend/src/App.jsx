@@ -9,6 +9,7 @@ function App() {
   const [output, setOutput] = useState('')
   const [vimEnabled, setVimEnabled] = useState(true)
   const [testCase, setTestCase] = useState('addends = two_sum([2, 7, 11, 15], 9)\nprint(addends)')
+  const [llmPrompt, setLlmPrompt] = useState('')
   const outputRef = useRef(null)
 
   useEffect(() => {
@@ -92,6 +93,26 @@ function App() {
     setCode(lines.join('\n'))
   }
 
+  const applyLlmPrompt = async () => {
+    try {
+      const res = await fetch('http://localhost:5001/api/llm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: llmPrompt, code })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setCode(data.code)
+      } else {
+        console.error('LLM Error:', data.error)
+        alert(`Error: ${data.error}`)
+      }
+    } catch (error) {
+      console.error('Fetch Error:', error)
+      alert(`Failed to connect to server: ${error.message}`)
+    }
+  }
+
   return (
     <div className="app">
       <h1>Code Runner</h1>
@@ -119,6 +140,38 @@ function App() {
             resize: 'vertical'
           }}
         />
+      </div>
+      <div style={{
+        background: '#1e1e1e',
+        border: '1px solid #3e3e42',
+        padding: '1rem',
+        marginBottom: '1rem',
+        borderRadius: '2px'
+      }}>
+        <div style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>LLM Prompt</div>
+        <textarea
+          value={llmPrompt}
+          onChange={e => setLlmPrompt(e.target.value)}
+          placeholder="Enter instructions to modify the code..."
+          style={{
+            width: '100%',
+            minHeight: '60px',
+            background: '#2d2d2d',
+            color: '#d4d4d4',
+            border: '1px solid #3e3e42',
+            borderRadius: '2px',
+            padding: '0.5rem',
+            fontFamily: 'monospace',
+            fontSize: '0.9rem',
+            resize: 'vertical'
+          }}
+        />
+        <button
+          onClick={applyLlmPrompt}
+          style={{ marginTop: '0.5rem' }}
+        >
+          Apply Prompt
+        </button>
       </div>
       <div className="container">
         <div>
