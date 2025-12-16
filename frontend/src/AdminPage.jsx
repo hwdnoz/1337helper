@@ -15,9 +15,11 @@ function AdminPage({ onLogout }) {
   const [loadingMetrics, setLoadingMetrics] = useState(true)
   const [selectedCall, setSelectedCall] = useState(null)
   const [loadingCall, setLoadingCall] = useState(false)
+  const [cacheStats, setCacheStats] = useState(null)
 
   useEffect(() => {
     loadMetrics()
+    loadCacheStats()
   }, [])
 
   const loadMetrics = async () => {
@@ -64,6 +66,53 @@ function AdminPage({ onLogout }) {
     setSelectedCall(null)
   }
 
+  const loadCacheStats = async () => {
+    try {
+      const res = await fetch('http://localhost:5001/api/cache/stats')
+      const data = await res.json()
+
+      if (data.success) {
+        setCacheStats(data.stats)
+      }
+    } catch (error) {
+      console.error('Failed to load cache stats:', error)
+    }
+  }
+
+  const clearCache = async () => {
+    if (!confirm('Are you sure you want to clear all cache entries?')) {
+      return
+    }
+
+    try {
+      const res = await fetch('http://localhost:5001/api/cache/clear', { method: 'POST' })
+      const data = await res.json()
+
+      if (data.success) {
+        alert(`Cleared ${data.deleted_count} cache entries`)
+        loadCacheStats()
+      }
+    } catch (error) {
+      console.error('Failed to clear cache:', error)
+      alert('Failed to clear cache')
+    }
+  }
+
+  const clearExpiredCache = async () => {
+    try {
+      const res = await fetch('http://localhost:5001/api/cache/clear-expired', { method: 'POST' })
+      const data = await res.json()
+
+      if (data.success) {
+        alert(`Cleared ${data.deleted_count} expired cache entries`)
+        loadCacheStats()
+      }
+    } catch (error) {
+      console.error('Failed to clear expired cache:', error)
+      alert('Failed to clear expired cache')
+    }
+  }
+
   const prepareChartData = () => {
     return metrics
       .slice()
@@ -73,7 +122,19 @@ function AdminPage({ onLogout }) {
         latency: (metric.latency_ms / 1000).toFixed(2),
         tokensSent: metric.tokens_sent,
         tokensReceived: metric.tokens_received,
-        totalTokens: metric.total_tokens
+        totalTokens: metric.total_tokens,
+        cacheHit: metric.metadata?.cache_hit ? 1 : 0
+      }))
+  }
+
+  const prepareCacheChartData = () => {
+    return metrics
+      .slice()
+      .reverse()
+      .map((metric) => ({
+        name: new Date(metric.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        cacheHits: metric.metadata?.cache_hit ? 1 : 0,
+        cacheMisses: metric.metadata?.cache_hit === false ? 1 : 0
       }))
   }
 
@@ -125,6 +186,47 @@ function AdminPage({ onLogout }) {
                 <div className="stat-card">
                   <div className="stat-label">Avg Latency</div>
                   <div className="stat-value">{(summary.avg_latency_ms / 1000).toFixed(2)}s</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Cache Statistics */}
+          {cacheStats && (
+            <div className="admin-section">
+              <h2 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Cache Statistics</span>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    onClick={clearExpiredCache}
+                    style={{ background: '#f57c00', fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                  >
+                    Clear Expired
+                  </button>
+                  <button
+                    onClick={clearCache}
+                    style={{ background: '#d32f2f', fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+                  >
+                    Clear All Cache
+                  </button>
+                </div>
+              </h2>
+              <div className="admin-stats-grid">
+                <div className="stat-card">
+                  <div className="stat-label">Cached Entries</div>
+                  <div className="stat-value">{cacheStats.total_entries}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-label">Total Accesses</div>
+                  <div className="stat-value">{cacheStats.total_accesses}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-label">Avg Accesses/Entry</div>
+                  <div className="stat-value">{cacheStats.avg_accesses_per_entry}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-label">TTL (Hours)</div>
+                  <div className="stat-value">{cacheStats.ttl_hours}h</div>
                 </div>
               </div>
             </div>
@@ -207,6 +309,55 @@ function AdminPage({ onLogout }) {
                     name="Tokens Received"
                     strokeWidth={2}
                     dot={{ r: 3 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Cache Hit/Miss Chart */}
+          {metrics.length > 0 && (
+            <div className="admin-section">
+              <h2>Cache Performance Over Time</h2>
+              <ResponsiveContainer width="100%" height={350}>
+                <LineChart data={prepareCacheChartData()} margin={{ top: 5, right: 90, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#3e3e42" />
+                  <XAxis
+                    dataKey="name"
+                    stroke="#888"
+                    style={{ fontSize: '0.8rem' }}
+                  />
+                  <YAxis
+                    stroke="#888"
+                    style={{ fontSize: '0.8rem' }}
+                    label={{ value: 'Count', angle: -90, position: 'insideLeft', style: { fill: '#888' } }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#252526',
+                      border: '1px solid #3e3e42',
+                      borderRadius: '4px',
+                      color: '#d4d4d4'
+                    }}
+                  />
+                  <Legend
+                    wrapperStyle={{ color: '#d4d4d4' }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="cacheHits"
+                    stroke="#4caf50"
+                    name="Cache Hits"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="cacheMisses"
+                    stroke="#ff9800"
+                    name="Cache Misses"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
                   />
                 </LineChart>
               </ResponsiveContainer>

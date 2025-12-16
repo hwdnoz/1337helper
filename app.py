@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from observability import logger
+from cache import cache
 
 load_dotenv()
 
@@ -60,54 +61,84 @@ Return ONLY the Python code for the solution, properly formatted and ready to ru
         print(fetch_prompt)
         print("-"*80)
 
-        # Track observability metrics
-        start_time = time.time()
-        error_msg = None
+        # Check cache first
+        cached_response = cache.get(fetch_prompt, 'leetcode_solve')
 
-        try:
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=fetch_prompt
-            )
+        if cached_response:
+            print("\n*** CACHE HIT - Using cached response ***\n")
+            response_text = cached_response['response_text']
 
-            latency_ms = (time.time() - start_time) * 1000
-
-            print("\nRAW RESPONSE FROM GOOGLE AI:")
-            print("-"*80)
-            print(response.text)
-            print("-"*80)
-
-            # Estimate tokens
-            tokens_sent = len(fetch_prompt) // 4
-            tokens_received = len(response.text) // 4
-
-            # Log the call
+            # Log cache hit
             logger.log_llm_call(
                 operation_type='leetcode_solve',
                 prompt=fetch_prompt,
-                response_text=response.text,
-                tokens_sent=tokens_sent,
-                tokens_received=tokens_received,
-                latency_ms=latency_ms,
-                error=error_msg,
-                metadata={'model': 'gemini-2.5-flash', 'problem_number': problem_number}
-            )
-        except Exception as e:
-            latency_ms = (time.time() - start_time) * 1000
-            error_msg = str(e)
-            logger.log_llm_call(
-                operation_type='leetcode_solve',
-                prompt=fetch_prompt,
-                response_text='',
-                tokens_sent=len(fetch_prompt) // 4,
+                response_text=response_text,
+                tokens_sent=0,
                 tokens_received=0,
-                latency_ms=latency_ms,
-                error=error_msg,
-                metadata={'model': 'gemini-2.5-flash', 'problem_number': problem_number}
+                latency_ms=1,
+                error=None,
+                metadata={'model': 'gemini-2.5-flash', 'problem_number': problem_number, 'cache_hit': True}
             )
-            raise
+        else:
+            print("\n*** CACHE MISS - Calling LLM API ***\n")
 
-        solution_code = response.text.strip()
+            # Track observability metrics
+            start_time = time.time()
+            error_msg = None
+
+            try:
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=fetch_prompt
+                )
+
+                latency_ms = (time.time() - start_time) * 1000
+                response_text = response.text
+
+                print("\nRAW RESPONSE FROM GOOGLE AI:")
+                print("-"*80)
+                print(response_text)
+                print("-"*80)
+
+                # Estimate tokens
+                tokens_sent = len(fetch_prompt) // 4
+                tokens_received = len(response_text) // 4
+
+                # Cache the response
+                cache.set(
+                    fetch_prompt,
+                    'leetcode_solve',
+                    response_text,
+                    metadata={'model': 'gemini-2.5-flash', 'problem_number': problem_number}
+                )
+
+                # Log the call
+                logger.log_llm_call(
+                    operation_type='leetcode_solve',
+                    prompt=fetch_prompt,
+                    response_text=response_text,
+                    tokens_sent=tokens_sent,
+                    tokens_received=tokens_received,
+                    latency_ms=latency_ms,
+                    error=error_msg,
+                    metadata={'model': 'gemini-2.5-flash', 'problem_number': problem_number, 'cache_hit': False}
+                )
+            except Exception as e:
+                latency_ms = (time.time() - start_time) * 1000
+                error_msg = str(e)
+                logger.log_llm_call(
+                    operation_type='leetcode_solve',
+                    prompt=fetch_prompt,
+                    response_text='',
+                    tokens_sent=len(fetch_prompt) // 4,
+                    tokens_received=0,
+                    latency_ms=latency_ms,
+                    error=error_msg,
+                    metadata={'model': 'gemini-2.5-flash', 'problem_number': problem_number, 'cache_hit': False}
+                )
+                raise
+
+        solution_code = response_text.strip()
 
         # Remove markdown code blocks if present
         if solution_code.startswith('```python'):
@@ -352,6 +383,43 @@ def get_call_details(call_id):
             return jsonify({'success': True, 'call': call})
         else:
             return jsonify({'success': False, 'error': 'Call not found'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/cache/stats', methods=['GET'])
+def get_cache_stats():
+    """Get cache statistics"""
+    try:
+        stats = cache.get_stats()
+        return jsonify({'success': True, 'stats': stats})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/cache/entries', methods=['GET'])
+def get_cache_entries():
+    """Get all cache entries"""
+    try:
+        limit = request.args.get('limit', 100, type=int)
+        entries = cache.get_all_entries(limit=limit)
+        return jsonify({'success': True, 'entries': entries})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/cache/clear', methods=['POST'])
+def clear_cache():
+    """Clear all cache entries"""
+    try:
+        deleted_count = cache.clear_all()
+        return jsonify({'success': True, 'deleted_count': deleted_count})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/cache/clear-expired', methods=['POST'])
+def clear_expired_cache():
+    """Clear expired cache entries"""
+    try:
+        deleted_count = cache.clear_expired()
+        return jsonify({'success': True, 'deleted_count': deleted_count})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
