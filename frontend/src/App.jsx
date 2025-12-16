@@ -8,8 +8,9 @@ function App() {
   const [code, setCode] = useState('')
   const [output, setOutput] = useState('')
   const [vimEnabled, setVimEnabled] = useState(true)
-  const [testCase, setTestCase] = useState('addends = two_sum([2, 7, 11, 15], 9)\nprint(addends)')
+  const [testCase, setTestCase] = useState('')
   const [llmPrompt, setLlmPrompt] = useState('')
+  const [leetcodeNumber, setLeetcodeNumber] = useState('')
   const outputRef = useRef(null)
 
   useEffect(() => {
@@ -113,6 +114,46 @@ function App() {
     }
   }
 
+  const solveLeetcode = async () => {
+    try {
+      const res = await fetch('http://localhost:5001/api/leetcode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ problem_number: leetcodeNumber })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setCode(data.code)
+      } else {
+        console.error('LeetCode Error:', data.error)
+        alert(`Error: ${data.error}`)
+      }
+    } catch (error) {
+      console.error('Fetch Error:', error)
+      alert(`Failed to connect to server: ${error.message}`)
+    }
+  }
+
+  const generateTestCases = async () => {
+    try {
+      const res = await fetch('http://localhost:5001/api/generate-test-cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setTestCase(data.test_cases)
+      } else {
+        console.error('Generate Test Cases Error:', data.error)
+        alert(`Error: ${data.error}`)
+      }
+    } catch (error) {
+      console.error('Fetch Error:', error)
+      alert(`Failed to connect to server: ${error.message}`)
+    }
+  }
+
   return (
     <div className="app">
       <h1>Code Runner</h1>
@@ -123,7 +164,38 @@ function App() {
         marginBottom: '1rem',
         borderRadius: '2px'
       }}>
-        <div style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>Test Case</div>
+        <div style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>LeetCode Problem Solver</div>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <input
+            type="number"
+            value={leetcodeNumber}
+            onChange={e => setLeetcodeNumber(e.target.value)}
+            placeholder="Enter problem number (e.g., 70)"
+            style={{
+              flex: 1,
+              background: '#2d2d2d',
+              color: '#d4d4d4',
+              border: '1px solid #3e3e42',
+              borderRadius: '2px',
+              padding: '0.5rem',
+              fontFamily: 'monospace',
+              fontSize: '0.9rem'
+            }}
+          />
+          <button onClick={solveLeetcode}>Solve</button>
+        </div>
+      </div>
+      <div style={{
+        background: '#1e1e1e',
+        border: '1px solid #3e3e42',
+        padding: '1rem',
+        marginBottom: '1rem',
+        borderRadius: '2px'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+          <div style={{ fontWeight: 'bold' }}>Test Case</div>
+          <button onClick={generateTestCases} style={{ padding: '0.25rem 1rem' }}>Generate Test Cases</button>
+        </div>
         <textarea
           value={testCase}
           onChange={e => setTestCase(e.target.value)}
@@ -174,8 +246,8 @@ function App() {
         </button>
       </div>
       <div className="container">
-        <div>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
+        <div style={{ flex: '2', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
             <button
               onClick={() => setVimEnabled(!vimEnabled)}
               style={{
@@ -189,23 +261,25 @@ function App() {
             <button onClick={importTestCase}>Import Test Cases</button>
             <button onClick={clearTestCases}>Clear Test Cases</button>
           </div>
-          <CodeMirror
-            value={code}
-            onChange={setCode}
-            extensions={vimEnabled ? [python(), vim()] : [python()]}
-            theme="dark"
-            basicSetup={{
-              lineNumbers: true,
-              highlightActiveLineGutter: true,
-              highlightActiveLine: true,
-              foldGutter: true
-            }}
-            style={{ fontSize: 14, height: 'calc(100% - 40px)' }}
-          />
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <CodeMirror
+              value={code}
+              onChange={setCode}
+              extensions={vimEnabled ? [python(), vim()] : [python()]}
+              theme="dark"
+              basicSetup={{
+                lineNumbers: true,
+                highlightActiveLineGutter: true,
+                highlightActiveLine: true,
+                foldGutter: true
+              }}
+              style={{ fontSize: 14, height: '100%', overflow: 'auto' }}
+            />
+          </div>
         </div>
-        <div>
-          <div style={{ marginBottom: '0.5rem', color: '#d4d4d4' }}>Output</div>
-          <pre ref={outputRef} style={{ height: 'calc(100% - 30px)' }}>{output}</pre>
+        <div style={{ flex: '1', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+          <div style={{ marginBottom: '0.5rem', color: '#d4d4d4', flexShrink: 0 }}>Output</div>
+          <pre ref={outputRef} style={{ flex: 1, minHeight: 0 }}>{output}</pre>
         </div>
       </div>
     </div>

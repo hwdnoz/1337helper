@@ -30,6 +30,117 @@ def run_code():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/api/leetcode', methods=['POST'])
+def solve_leetcode():
+    problem_number = request.json.get('problem_number', '')
+
+    print("\n" + "="*80)
+    print(f"LEETCODE SOLVER - Problem #{problem_number}")
+    print("="*80)
+
+    try:
+        # Use the LLM to fetch the problem description and generate a solution
+        fetch_prompt = f"""Fetch the LeetCode problem #{problem_number} and provide a complete Python solution.
+
+Please structure your response as follows:
+1. Problem title and description
+2. A complete, working Python solution
+3. Time and space complexity analysis
+
+Return ONLY the Python code for the solution, properly formatted and ready to run. Include the problem description as a docstring at the top of the solution function."""
+
+        print("\nPROMPT SENT TO GOOGLE AI:")
+        print("-"*80)
+        print(fetch_prompt)
+        print("-"*80)
+
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=fetch_prompt
+        )
+
+        print("\nRAW RESPONSE FROM GOOGLE AI:")
+        print("-"*80)
+        print(response.text)
+        print("-"*80)
+
+        solution_code = response.text.strip()
+
+        # Remove markdown code blocks if present
+        if solution_code.startswith('```python'):
+            solution_code = solution_code.split('```python')[1].split('```')[0].strip()
+        elif solution_code.startswith('```'):
+            solution_code = solution_code.split('```')[1].split('```')[0].strip()
+
+        print("\nFINAL SOLUTION CODE:")
+        print("-"*80)
+        print(solution_code)
+        print("-"*80 + "\n")
+
+        return jsonify({'success': True, 'code': solution_code})
+    except Exception as e:
+        print(f"\nERROR: {str(e)}\n")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/generate-test-cases', methods=['POST'])
+def generate_test_cases():
+    code = request.json.get('code', '')
+
+    print("\n" + "="*80)
+    print("GENERATING TEST CASES")
+    print(f"Code Length: {len(code)} characters")
+    print("="*80)
+
+    try:
+        # Use the LLM to generate test cases based on the code
+        test_prompt = f"""Given the following Python code, generate exactly 3 simple test cases.
+
+Code:
+```python
+{code}
+```
+
+Generate exactly 3 simple test cases in the following format:
+- Create Python code that calls the main function with 3 different simple inputs
+- Keep the test cases straightforward and easy to understand
+- Print the results so they can be verified
+- Do NOT include any comments in the code
+
+Return ONLY the test case code (without markdown formatting and without any comments), ready to be pasted into the test case window."""
+
+        print("\nPROMPT SENT TO GOOGLE AI:")
+        print("-"*80)
+        print(test_prompt)
+        print("-"*80)
+
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=test_prompt
+        )
+
+        print("\nRAW RESPONSE FROM GOOGLE AI:")
+        print("-"*80)
+        print(response.text)
+        print("-"*80)
+
+        test_cases = response.text.strip()
+
+        # Remove markdown code blocks if present
+        if test_cases.startswith('```python'):
+            test_cases = test_cases.split('```python')[1].split('```')[0].strip()
+        elif test_cases.startswith('```'):
+            test_cases = test_cases.split('```')[1].split('```')[0].strip()
+
+        print("\nFINAL TEST CASES:")
+        print("-"*80)
+        print(test_cases)
+        print("-"*80 + "\n")
+
+        return jsonify({'success': True, 'test_cases': test_cases})
+    except Exception as e:
+        print(f"\nERROR: {str(e)}\n")
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/api/models', methods=['GET'])
 def list_models():
     try:
