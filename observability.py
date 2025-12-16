@@ -115,8 +115,8 @@ class ObservabilityLogger:
 
         cursor.execute('''
             SELECT
-                id, timestamp, operation_type, prompt_preview, prompt_length,
-                response_preview, response_length, tokens_sent, tokens_received,
+                id, timestamp, operation_type, prompt, prompt_preview, prompt_length,
+                response_text, response_preview, response_length, tokens_sent, tokens_received,
                 total_tokens, latency_ms, success, error, metadata
             FROM llm_calls
             ORDER BY timestamp DESC

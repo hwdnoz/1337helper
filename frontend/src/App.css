@@ -522,3 +522,129 @@ pre {
 .modal-section.error h3 {
   color: #f44336;
 }
+
+/* Database Table View */
+.table-container {
+  background: #1e1e1e;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  overflow: auto;
+  max-height: calc(100vh - 150px);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.data-table thead {
+  position: sticky;
+  top: 0;
+  background: #252526;
+  z-index: 10;
+}
+
+.data-table th {
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: #0e639c;
+  border-bottom: 2px solid #3e3e42;
+  white-space: nowrap;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+}
+
+.data-table tbody tr {
+  border-bottom: 1px solid #2d2d2d;
+  transition: background 0.15s ease;
+}
+
+.data-table tbody tr:hover {
+  background: #252526;
+}
+
+.data-table td {
+  padding: 0.75rem;
+  color: #d4d4d4;
+  vertical-align: top;
+}
+
+.preview-cell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.8rem;
+  color: #aaa;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-badge.success {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.status-badge.error {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+/* Sortable columns */
+.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.sortable:hover {
+  background: #2d2d2d;
+}
+
+/* Filter row */
+.filter-row th {
+  padding: 0.5rem;
+  background: #1e1e1e;
+  border-bottom: 1px solid #3e3e42;
+}
+
+.filter-row input {
+  width: 100%;
+  background: #2d2d2d;
+  color: #d4d4d4;
+  border: 1px solid #3e3e42;
+  border-radius: 2px;
+  padding: 0.4rem;
+  font-size: 0.75rem;
+  font-family: inherit;
+}
+
+.filter-row input:focus {
+  outline: none;
+  border-color: #0e639c;
+}
+
+.filter-row input::placeholder {
+  color: #666;
+}
+
+/* Expanded cells */
+.expanded-cell {
+  max-width: 400px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.8rem;
+  color: #d4d4d4;
+  line-height: 1.4;
+}

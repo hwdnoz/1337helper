@@ -63,6 +63,9 @@ function AdminPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1 style={{ margin: 0 }}>Admin Dashboard</h1>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button onClick={() => navigate('/admin/database')}>
+            View Database
+          </button>
           <button onClick={loadMetrics}>Refresh Metrics</button>
           <button onClick={() => navigate('/')} style={{ background: '#555' }}>
             Back to Code Runner
