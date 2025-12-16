@@ -1,12 +1,54 @@
+import sqlite3
 import json
 import time
 from datetime import datetime
 from pathlib import Path
 
 class ObservabilityLogger:
-    def __init__(self, log_file='llm_metrics.jsonl'):
-        self.log_file = log_file
-        self.log_path = Path(log_file)
+    def __init__(self, db_path='llm_metrics.db'):
+        self.db_path = db_path
+        self._init_database()
+
+    def _init_database(self):
+        """Initialize the SQLite database and create tables if they don't exist."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS llm_calls (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                operation_type TEXT NOT NULL,
+                prompt TEXT NOT NULL,
+                prompt_preview TEXT NOT NULL,
+                prompt_length INTEGER NOT NULL,
+                response_text TEXT NOT NULL,
+                response_preview TEXT NOT NULL,
+                response_length INTEGER NOT NULL,
+                tokens_sent INTEGER NOT NULL,
+                tokens_received INTEGER NOT NULL,
+                total_tokens INTEGER NOT NULL,
+                latency_ms REAL NOT NULL,
+                success BOOLEAN NOT NULL,
+                error TEXT,
+                metadata TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Create indexes for common queries
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_timestamp ON llm_calls(timestamp DESC)
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_operation_type ON llm_calls(operation_type)
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_success ON llm_calls(success)
+        ''')
+
+        conn.commit()
+        conn.close()
 
     def log_llm_call(self, operation_type, prompt, response_text, tokens_sent, tokens_received,
                      latency_ms, error=None, metadata=None):
@@ -23,27 +65,39 @@ class ObservabilityLogger:
             error: Error message if the call failed
             metadata: Additional metadata (e.g., problem_number, model_name)
         """
-        log_entry = {
-            'timestamp': datetime.utcnow().isoformat(),
+        timestamp = datetime.utcnow().isoformat()
+        prompt_preview = prompt[:200] + '...' if len(prompt) > 200 else prompt
+        response_preview = response_text[:200] + '...' if len(response_text) > 200 else response_text
+        metadata_json = json.dumps(metadata) if metadata else None
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            INSERT INTO llm_calls (
+                timestamp, operation_type, prompt, prompt_preview, prompt_length,
+                response_text, response_preview, response_length,
+                tokens_sent, tokens_received, total_tokens,
+                latency_ms, success, error, metadata
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            timestamp, operation_type, prompt, prompt_preview, len(prompt),
+            response_text, response_preview, len(response_text),
+            tokens_sent, tokens_received, tokens_sent + tokens_received,
+            latency_ms, error is None, error, metadata_json
+        ))
+
+        conn.commit()
+        conn.close()
+
+        return {
+            'timestamp': timestamp,
             'operation_type': operation_type,
-            'prompt_preview': prompt[:200] + '...' if len(prompt) > 200 else prompt,
-            'prompt_length': len(prompt),
-            'response_preview': response_text[:200] + '...' if len(response_text) > 200 else response_text,
-            'response_length': len(response_text),
             'tokens_sent': tokens_sent,
             'tokens_received': tokens_received,
-            'total_tokens': tokens_sent + tokens_received,
             'latency_ms': latency_ms,
-            'success': error is None,
-            'error': error,
-            'metadata': metadata or {}
+            'success': error is None
         }
-
-        # Append to JSONL file
-        with open(self.log_path, 'a') as f:
-            f.write(json.dumps(log_entry) + '\n')
-
-        return log_entry
 
     def get_metrics(self, limit=100):
         """
@@ -55,18 +109,32 @@ class ObservabilityLogger:
         Returns:
             List of log entries, most recent first
         """
-        if not self.log_path.exists():
-            return []
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
 
-        with open(self.log_path, 'r') as f:
-            lines = f.readlines()
+        cursor.execute('''
+            SELECT
+                id, timestamp, operation_type, prompt_preview, prompt_length,
+                response_preview, response_length, tokens_sent, tokens_received,
+                total_tokens, latency_ms, success, error, metadata
+            FROM llm_calls
+            ORDER BY timestamp DESC
+            LIMIT ?
+        ''', (limit,))
 
-        # Get the last N lines and parse them
-        recent_lines = lines[-limit:] if len(lines) > limit else lines
-        metrics = [json.loads(line) for line in recent_lines]
+        rows = cursor.fetchall()
+        conn.close()
 
-        # Return in reverse order (most recent first)
-        return list(reversed(metrics))
+        metrics = []
+        for row in rows:
+            metric = dict(row)
+            # Parse metadata JSON
+            if metric['metadata']:
+                metric['metadata'] = json.loads(metric['metadata'])
+            metrics.append(metric)
+
+        return metrics
 
     def get_summary_stats(self):
         """
@@ -75,50 +143,63 @@ class ObservabilityLogger:
         Returns:
             Dictionary with aggregate metrics
         """
-        if not self.log_path.exists():
-            return {
-                'total_calls': 0,
-                'successful_calls': 0,
-                'failed_calls': 0,
-                'total_tokens': 0,
-                'avg_latency_ms': 0,
-                'total_latency_ms': 0
-            }
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
 
-        metrics = self.get_metrics(limit=None)  # Get all
+        # Get overall stats
+        cursor.execute('''
+            SELECT
+                COUNT(*) as total_calls,
+                SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successful_calls,
+                SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as failed_calls,
+                SUM(total_tokens) as total_tokens,
+                AVG(latency_ms) as avg_latency_ms,
+                SUM(latency_ms) as total_latency_ms
+            FROM llm_calls
+        ''')
 
-        if not metrics:
-            return {
-                'total_calls': 0,
-                'successful_calls': 0,
-                'failed_calls': 0,
-                'total_tokens': 0,
-                'avg_latency_ms': 0,
-                'total_latency_ms': 0
-            }
+        stats = cursor.fetchone()
 
-        total_calls = len(metrics)
-        successful_calls = sum(1 for m in metrics if m['success'])
-        failed_calls = total_calls - successful_calls
-        total_tokens = sum(m['total_tokens'] for m in metrics)
-        total_latency = sum(m['latency_ms'] for m in metrics)
-        avg_latency = total_latency / total_calls if total_calls > 0 else 0
+        # Get operation breakdown
+        cursor.execute('''
+            SELECT operation_type, COUNT(*) as count
+            FROM llm_calls
+            GROUP BY operation_type
+        ''')
 
-        # Get operation type breakdown
-        operation_counts = {}
-        for m in metrics:
-            op_type = m['operation_type']
-            operation_counts[op_type] = operation_counts.get(op_type, 0) + 1
+        operation_breakdown = {row[0]: row[1] for row in cursor.fetchall()}
+
+        conn.close()
 
         return {
-            'total_calls': total_calls,
-            'successful_calls': successful_calls,
-            'failed_calls': failed_calls,
-            'total_tokens': total_tokens,
-            'avg_latency_ms': round(avg_latency, 2),
-            'total_latency_ms': round(total_latency, 2),
-            'operation_breakdown': operation_counts
+            'total_calls': stats[0] or 0,
+            'successful_calls': stats[1] or 0,
+            'failed_calls': stats[2] or 0,
+            'total_tokens': stats[3] or 0,
+            'avg_latency_ms': round(stats[4], 2) if stats[4] else 0,
+            'total_latency_ms': round(stats[5], 2) if stats[5] else 0,
+            'operation_breakdown': operation_breakdown
         }
+
+    def get_call_by_id(self, call_id):
+        """Get full details of a specific LLM call including full prompt and response."""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT * FROM llm_calls WHERE id = ?
+        ''', (call_id,))
+
+        row = cursor.fetchone()
+        conn.close()
+
+        if row:
+            call = dict(row)
+            if call['metadata']:
+                call['metadata'] = json.loads(call['metadata'])
+            return call
+        return None
 
 # Global logger instance
 logger = ObservabilityLogger()
