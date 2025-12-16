@@ -17,6 +17,7 @@ function App() {
   const [loadingLlmPrompt, setLoadingLlmPrompt] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [solutionPrompt, setSolutionPrompt] = useState(DEFAULT_LEETCODE_PROMPT)
+  const [activePreset, setActivePreset] = useState('default')
   const outputRef = useRef(null)
 
   useEffect(() => {
@@ -163,11 +164,25 @@ function App() {
 
   const resetPromptToDefault = () => {
     setSolutionPrompt(DEFAULT_LEETCODE_PROMPT)
+    setActivePreset('default')
   }
 
   const applyPreset = (preset) => {
     const modifiedPrompt = PROMPT_PRESETS[preset] || DEFAULT_LEETCODE_PROMPT
     setSolutionPrompt(modifiedPrompt)
+    setActivePreset(preset)
+  }
+
+  const getPresetButtonStyle = (preset) => {
+    const isActive = activePreset === preset
+    return {
+      padding: '0.5rem',
+      fontSize: '0.85rem',
+      background: isActive ? '#0e639c' : '#555',
+      border: isActive ? '2px solid #1177bb' : '2px solid transparent',
+      fontWeight: isActive ? '600' : '400',
+      position: 'relative'
+    }
   }
 
   const generateTestCases = async () => {
@@ -359,23 +374,23 @@ function App() {
           <div className="sidebar-section">
             <label>Quick Presets</label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
-              <button onClick={() => applyPreset('no-comments')} style={{ padding: '0.5rem', fontSize: '0.85rem' }}>
-                No Comments
+              <button onClick={() => applyPreset('no-comments')} style={getPresetButtonStyle('no-comments')}>
+                {activePreset === 'no-comments' && '✓ '}No Comments
               </button>
-              <button onClick={() => applyPreset('minimal-comments')} style={{ padding: '0.5rem', fontSize: '0.85rem' }}>
-                Minimal Comments
+              <button onClick={() => applyPreset('minimal-comments')} style={getPresetButtonStyle('minimal-comments')}>
+                {activePreset === 'minimal-comments' && '✓ '}Minimal Comments
               </button>
-              <button onClick={() => applyPreset('concise')} style={{ padding: '0.5rem', fontSize: '0.85rem' }}>
-                Concise
+              <button onClick={() => applyPreset('concise')} style={getPresetButtonStyle('concise')}>
+                {activePreset === 'concise' && '✓ '}Concise
               </button>
-              <button onClick={() => applyPreset('detailed')} style={{ padding: '0.5rem', fontSize: '0.85rem' }}>
-                Detailed
+              <button onClick={() => applyPreset('detailed')} style={getPresetButtonStyle('detailed')}>
+                {activePreset === 'detailed' && '✓ '}Detailed
               </button>
-              <button onClick={() => applyPreset('optimal')} style={{ padding: '0.5rem', fontSize: '0.85rem' }}>
-                Optimal Solution
+              <button onClick={() => applyPreset('optimal')} style={getPresetButtonStyle('optimal')}>
+                {activePreset === 'optimal' && '✓ '}Optimal Solution
               </button>
-              <button onClick={resetPromptToDefault} style={{ padding: '0.5rem', fontSize: '0.85rem', background: '#555' }}>
-                Default
+              <button onClick={resetPromptToDefault} style={getPresetButtonStyle('default')}>
+                {activePreset === 'default' && '✓ '}Default
               </button>
             </div>
           </div>
@@ -385,7 +400,10 @@ function App() {
             <textarea
               className="sidebar-textarea"
               value={solutionPrompt}
-              onChange={(e) => setSolutionPrompt(e.target.value)}
+              onChange={(e) => {
+                setSolutionPrompt(e.target.value)
+                setActivePreset(null) // Clear active preset when manually editing
+              }}
               placeholder="Enter your custom prompt..."
             />
           </div>
