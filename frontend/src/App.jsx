@@ -11,6 +11,9 @@ function App() {
   const [testCase, setTestCase] = useState('')
   const [llmPrompt, setLlmPrompt] = useState('')
   const [leetcodeNumber, setLeetcodeNumber] = useState('')
+  const [loadingTestCases, setLoadingTestCases] = useState(false)
+  const [loadingLeetcode, setLoadingLeetcode] = useState(false)
+  const [loadingLlmPrompt, setLoadingLlmPrompt] = useState(false)
   const outputRef = useRef(null)
 
   useEffect(() => {
@@ -95,6 +98,7 @@ function App() {
   }
 
   const applyLlmPrompt = async () => {
+    setLoadingLlmPrompt(true)
     try {
       const res = await fetch('http://localhost:5001/api/llm', {
         method: 'POST',
@@ -111,10 +115,13 @@ function App() {
     } catch (error) {
       console.error('Fetch Error:', error)
       alert(`Failed to connect to server: ${error.message}`)
+    } finally {
+      setLoadingLlmPrompt(false)
     }
   }
 
   const solveLeetcode = async () => {
+    setLoadingLeetcode(true)
     try {
       const res = await fetch('http://localhost:5001/api/leetcode', {
         method: 'POST',
@@ -131,10 +138,13 @@ function App() {
     } catch (error) {
       console.error('Fetch Error:', error)
       alert(`Failed to connect to server: ${error.message}`)
+    } finally {
+      setLoadingLeetcode(false)
     }
   }
 
   const generateTestCases = async () => {
+    setLoadingTestCases(true)
     try {
       const res = await fetch('http://localhost:5001/api/generate-test-cases', {
         method: 'POST',
@@ -151,6 +161,8 @@ function App() {
     } catch (error) {
       console.error('Fetch Error:', error)
       alert(`Failed to connect to server: ${error.message}`)
+    } finally {
+      setLoadingTestCases(false)
     }
   }
 
@@ -190,7 +202,8 @@ function App() {
         border: '1px solid #3e3e42',
         padding: '1rem',
         marginBottom: '1rem',
-        borderRadius: '2px'
+        borderRadius: '2px',
+        position: 'relative'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
           <div style={{ fontWeight: 'bold' }}>Test Case</div>
@@ -212,6 +225,11 @@ function App() {
             resize: 'vertical'
           }}
         />
+        {loadingTestCases && (
+          <div className="loading-overlay">
+            <div className="spinner"></div>
+          </div>
+        )}
       </div>
       <div style={{
         background: '#1e1e1e',
@@ -246,7 +264,7 @@ function App() {
         </button>
       </div>
       <div className="container">
-        <div style={{ flex: '2', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+        <div style={{ flex: '2', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
             <button
               onClick={() => setVimEnabled(!vimEnabled)}
@@ -276,6 +294,11 @@ function App() {
               style={{ fontSize: 14, height: '100%', overflow: 'auto' }}
             />
           </div>
+          {(loadingLeetcode || loadingLlmPrompt) && (
+            <div className="loading-overlay">
+              <div className="spinner"></div>
+            </div>
+          )}
         </div>
         <div style={{ flex: '1', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
           <div style={{ marginBottom: '0.5rem', color: '#d4d4d4', flexShrink: 0 }}>Output</div>
