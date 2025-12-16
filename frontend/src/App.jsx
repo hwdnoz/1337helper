@@ -16,6 +16,7 @@ function App() {
   const [loadingLeetcode, setLoadingLeetcode] = useState(false)
   const [loadingLlmPrompt, setLoadingLlmPrompt] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarMode, setSidebarMode] = useState('solution-prompt') // 'solution-prompt', 'test-case', 'llm-prompt'
   const [solutionPrompt, setSolutionPrompt] = useState(DEFAULT_LEETCODE_PROMPT)
   const [activePreset, setActivePreset] = useState('default')
   const outputRef = useRef(null)
@@ -129,7 +130,17 @@ function App() {
       alert('Please enter a problem number first')
       return
     }
+    setSidebarMode('solution-prompt')
     setSidebarOpen(true)
+  }
+
+  const toggleSidebar = (mode) => {
+    if (sidebarOpen && sidebarMode === mode) {
+      setSidebarOpen(false)
+    } else {
+      setSidebarMode(mode)
+      setSidebarOpen(true)
+    }
   }
 
   const solveLeetcode = async () => {
@@ -210,100 +221,60 @@ function App() {
 
   return (
     <div className="app">
-      <h1>Code Runner</h1>
-      <div style={{
-        background: '#1e1e1e',
-        border: '1px solid #3e3e42',
-        padding: '1rem',
-        marginBottom: '1rem',
-        borderRadius: '2px'
-      }}>
-        <div style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>LeetCode Problem Solver</div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <input
-            type="number"
-            value={leetcodeNumber}
-            onChange={e => setLeetcodeNumber(e.target.value)}
-            placeholder="Enter problem number (e.g., 70)"
-            style={{
-              flex: 1,
-              background: '#2d2d2d',
-              color: '#d4d4d4',
-              border: '1px solid #3e3e42',
-              borderRadius: '2px',
-              padding: '0.5rem',
-              fontFamily: 'monospace',
-              fontSize: '0.9rem'
-            }}
-          />
-          <button onClick={openSolutionPromptManager}>Solve</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h1 style={{ margin: 0 }}>Code Runner</h1>
+
+        {/* Sidebar Toggle Buttons */}
+        <div className="sidebar-toggles">
+          <button
+            className={`sidebar-toggle-btn ${sidebarOpen && sidebarMode === 'test-case' ? 'active' : ''}`}
+            onClick={() => toggleSidebar('test-case')}
+          >
+            Test Cases
+          </button>
+          <button
+            className={`sidebar-toggle-btn ${sidebarOpen && sidebarMode === 'llm-prompt' ? 'active' : ''}`}
+            onClick={() => toggleSidebar('llm-prompt')}
+          >
+            LLM Prompt
+          </button>
+          <button
+            className={`sidebar-toggle-btn ${sidebarOpen && sidebarMode === 'solution-prompt' ? 'active' : ''}`}
+            onClick={() => toggleSidebar('solution-prompt')}
+          >
+            Solution Prompt
+          </button>
         </div>
       </div>
+
       <div style={{
         background: '#1e1e1e',
         border: '1px solid #3e3e42',
         padding: '1rem',
         marginBottom: '1rem',
         borderRadius: '2px',
-        position: 'relative'
+        display: 'flex',
+        gap: '1rem',
+        alignItems: 'center'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-          <div style={{ fontWeight: 'bold' }}>Test Case</div>
-          <button onClick={generateTestCases} style={{ padding: '0.25rem 1rem' }}>Generate Test Cases</button>
-        </div>
-        <textarea
-          value={testCase}
-          onChange={e => setTestCase(e.target.value)}
+        <div style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>LeetCode Problem:</div>
+        <input
+          type="number"
+          value={leetcodeNumber}
+          onChange={e => setLeetcodeNumber(e.target.value)}
+          placeholder="e.g., 70"
           style={{
-            width: '100%',
-            minHeight: '60px',
+            width: '100px',
             background: '#2d2d2d',
             color: '#d4d4d4',
             border: '1px solid #3e3e42',
             borderRadius: '2px',
             padding: '0.5rem',
             fontFamily: 'monospace',
-            fontSize: '0.9rem',
-            resize: 'vertical'
+            fontSize: '0.9rem'
           }}
         />
-        {loadingTestCases && (
-          <div className="loading-overlay">
-            <div className="spinner"></div>
-          </div>
-        )}
-      </div>
-      <div style={{
-        background: '#1e1e1e',
-        border: '1px solid #3e3e42',
-        padding: '1rem',
-        marginBottom: '1rem',
-        borderRadius: '2px'
-      }}>
-        <div style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>LLM Prompt</div>
-        <textarea
-          value={llmPrompt}
-          onChange={e => setLlmPrompt(e.target.value)}
-          placeholder="Enter instructions to modify the code..."
-          style={{
-            width: '100%',
-            minHeight: '60px',
-            background: '#2d2d2d',
-            color: '#d4d4d4',
-            border: '1px solid #3e3e42',
-            borderRadius: '2px',
-            padding: '0.5rem',
-            fontFamily: 'monospace',
-            fontSize: '0.9rem',
-            resize: 'vertical'
-          }}
-        />
-        <button
-          onClick={applyLlmPrompt}
-          style={{ marginTop: '0.5rem' }}
-        >
-          Apply Prompt
-        </button>
+        <button onClick={openSolutionPromptManager}>Solve</button>
       </div>
       <div className="container">
         <div style={{ flex: '2', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
@@ -348,7 +319,7 @@ function App() {
         </div>
       </div>
 
-      {/* Solution Prompt Manager Sidebar */}
+      {/* Unified Sidebar */}
       {sidebarOpen && (
         <div
           className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
@@ -357,7 +328,11 @@ function App() {
       )}
       <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
-          <h2>Solution Prompt Manager</h2>
+          <h2>
+            {sidebarMode === 'test-case' && 'Test Cases'}
+            {sidebarMode === 'llm-prompt' && 'LLM Prompt'}
+            {sidebarMode === 'solution-prompt' && 'Solution Prompt Manager'}
+          </h2>
           <button
             className="sidebar-close"
             onClick={() => setSidebarOpen(false)}
@@ -365,60 +340,129 @@ function App() {
             ×
           </button>
         </div>
-        <div className="sidebar-content">
-          <div className="sidebar-info">
-            Customize the prompt sent to the LLM when solving problem #{leetcodeNumber || 'N/A'}.
-            Use {'{PROBLEM_NUMBER}'} as a placeholder for the problem number.
-          </div>
 
-          <div className="sidebar-section">
-            <label>Quick Presets</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
-              <button onClick={() => applyPreset('no-comments')} style={getPresetButtonStyle('no-comments')}>
-                {activePreset === 'no-comments' && '✓ '}No Comments
+        {/* Test Case Panel */}
+        {sidebarMode === 'test-case' && (
+          <>
+            <div className="sidebar-content">
+              <div className="sidebar-info">
+                Generate or write test cases for your code. Click "Import Test Cases" to add them to your code.
+              </div>
+              <div className="sidebar-section">
+                <label>Test Cases</label>
+                <textarea
+                  className="sidebar-textarea"
+                  value={testCase}
+                  onChange={e => setTestCase(e.target.value)}
+                  placeholder="Enter test cases or generate them..."
+                  style={{ minHeight: '400px' }}
+                />
+              </div>
+              {loadingTestCases && (
+                <div className="loading-overlay">
+                  <div className="spinner"></div>
+                </div>
+              )}
+            </div>
+            <div className="sidebar-footer">
+              <button onClick={generateTestCases}>
+                Generate Test Cases
               </button>
-              <button onClick={() => applyPreset('minimal-comments')} style={getPresetButtonStyle('minimal-comments')}>
-                {activePreset === 'minimal-comments' && '✓ '}Minimal Comments
+              <button onClick={importTestCase}>
+                Import Test Cases
               </button>
-              <button onClick={() => applyPreset('concise')} style={getPresetButtonStyle('concise')}>
-                {activePreset === 'concise' && '✓ '}Concise
-              </button>
-              <button onClick={() => applyPreset('detailed')} style={getPresetButtonStyle('detailed')}>
-                {activePreset === 'detailed' && '✓ '}Detailed
-              </button>
-              <button onClick={() => applyPreset('optimal')} style={getPresetButtonStyle('optimal')}>
-                {activePreset === 'optimal' && '✓ '}Optimal Solution
-              </button>
-              <button onClick={resetPromptToDefault} style={getPresetButtonStyle('default')}>
-                {activePreset === 'default' && '✓ '}Default
+              <button onClick={clearTestCases} style={{ background: '#555' }}>
+                Clear Test Cases
               </button>
             </div>
-          </div>
+          </>
+        )}
 
-          <div className="sidebar-section">
-            <label>Prompt Template</label>
-            <textarea
-              className="sidebar-textarea"
-              value={solutionPrompt}
-              onChange={(e) => {
-                setSolutionPrompt(e.target.value)
-                setActivePreset(null) // Clear active preset when manually editing
-              }}
-              placeholder="Enter your custom prompt..."
-            />
-          </div>
-        </div>
-        <div className="sidebar-footer">
-          <button
-            onClick={() => setSidebarOpen(false)}
-            style={{ background: '#555' }}
-          >
-            Cancel
-          </button>
-          <button onClick={solveLeetcode}>
-            Solve Problem
-          </button>
-        </div>
+        {/* LLM Prompt Panel */}
+        {sidebarMode === 'llm-prompt' && (
+          <>
+            <div className="sidebar-content">
+              <div className="sidebar-info">
+                Enter instructions to modify your current code using AI.
+              </div>
+              <div className="sidebar-section">
+                <label>Modification Instructions</label>
+                <textarea
+                  className="sidebar-textarea"
+                  value={llmPrompt}
+                  onChange={e => setLlmPrompt(e.target.value)}
+                  placeholder="E.g., 'Add error handling', 'Optimize for performance', 'Add type hints'..."
+                  style={{ minHeight: '400px' }}
+                />
+              </div>
+            </div>
+            <div className="sidebar-footer">
+              <button onClick={applyLlmPrompt}>
+                Apply Prompt
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Solution Prompt Panel */}
+        {sidebarMode === 'solution-prompt' && (
+          <>
+            <div className="sidebar-content">
+              <div className="sidebar-info">
+                Customize the prompt sent to the LLM when solving problem #{leetcodeNumber || 'N/A'}.
+                Use {'{PROBLEM_NUMBER}'} as a placeholder for the problem number.
+              </div>
+
+              <div className="sidebar-section">
+                <label>Quick Presets</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
+                  <button onClick={() => applyPreset('no-comments')} style={getPresetButtonStyle('no-comments')}>
+                    {activePreset === 'no-comments' && '✓ '}No Comments
+                  </button>
+                  <button onClick={() => applyPreset('minimal-comments')} style={getPresetButtonStyle('minimal-comments')}>
+                    {activePreset === 'minimal-comments' && '✓ '}Minimal Comments
+                  </button>
+                  <button onClick={() => applyPreset('concise')} style={getPresetButtonStyle('concise')}>
+                    {activePreset === 'concise' && '✓ '}Concise
+                  </button>
+                  <button onClick={() => applyPreset('detailed')} style={getPresetButtonStyle('detailed')}>
+                    {activePreset === 'detailed' && '✓ '}Detailed
+                  </button>
+                  <button onClick={() => applyPreset('optimal')} style={getPresetButtonStyle('optimal')}>
+                    {activePreset === 'optimal' && '✓ '}Optimal Solution
+                  </button>
+                  <button onClick={resetPromptToDefault} style={getPresetButtonStyle('default')}>
+                    {activePreset === 'default' && '✓ '}Default
+                  </button>
+                </div>
+              </div>
+
+              <div className="sidebar-section">
+                <label>Prompt Template</label>
+                <textarea
+                  className="sidebar-textarea"
+                  value={solutionPrompt}
+                  onChange={(e) => {
+                    setSolutionPrompt(e.target.value)
+                    setActivePreset(null)
+                  }}
+                  placeholder="Enter your custom prompt..."
+                />
+              </div>
+            </div>
+            <div className="sidebar-footer">
+              <button
+                onClick={() => setSidebarOpen(false)}
+                style={{ background: '#555' }}
+              >
+                Cancel
+              </button>
+              <button onClick={solveLeetcode}>
+                Solve Problem
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
