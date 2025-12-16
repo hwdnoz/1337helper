@@ -343,5 +343,17 @@ def get_summary():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/api/observability/call/<int:call_id>', methods=['GET'])
+def get_call_details(call_id):
+    """Get full details of a specific LLM call"""
+    try:
+        call = logger.get_call_by_id(call_id)
+        if call:
+            return jsonify({'success': True, 'call': call})
+        else:
+            return jsonify({'success': False, 'error': 'Call not found'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 if __name__ == '__main__':
     app.run(debug=True, port=5001)

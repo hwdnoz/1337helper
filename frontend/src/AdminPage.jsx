@@ -7,6 +7,8 @@ function AdminPage() {
   const [metrics, setMetrics] = useState([])
   const [summary, setSummary] = useState(null)
   const [loadingMetrics, setLoadingMetrics] = useState(true)
+  const [selectedCall, setSelectedCall] = useState(null)
+  const [loadingCall, setLoadingCall] = useState(false)
 
   useEffect(() => {
     loadMetrics()
@@ -34,6 +36,26 @@ function AdminPage() {
     } finally {
       setLoadingMetrics(false)
     }
+  }
+
+  const loadCallDetails = async (callId) => {
+    setLoadingCall(true)
+    try {
+      const res = await fetch(`http://localhost:5001/api/observability/call/${callId}`)
+      const data = await res.json()
+
+      if (data.success) {
+        setSelectedCall(data.call)
+      }
+    } catch (error) {
+      console.error('Failed to load call details:', error)
+    } finally {
+      setLoadingCall(false)
+    }
+  }
+
+  const closeModal = () => {
+    setSelectedCall(null)
   }
 
   return (
@@ -77,7 +99,7 @@ function AdminPage() {
                 </div>
                 <div className="stat-card">
                   <div className="stat-label">Avg Latency</div>
-                  <div className="stat-value">{summary.avg_latency_ms}ms</div>
+                  <div className="stat-value">{(summary.avg_latency_ms / 1000).toFixed(2)}s</div>
                 </div>
               </div>
             </div>
@@ -103,7 +125,11 @@ function AdminPage() {
             <h2>Recent LLM Calls ({metrics.length})</h2>
             <div className="metrics-list">
               {metrics.map((metric, idx) => (
-                <div key={idx} className="metric-card">
+                <div
+                  key={idx}
+                  className="metric-card clickable"
+                  onClick={() => loadCallDetails(metric.id)}
+                >
                   <div className="metric-header">
                     <span className={`metric-status ${metric.success ? 'success' : 'error'}`}>
                       {metric.success ? '✓' : '✗'}
@@ -115,12 +141,12 @@ function AdminPage() {
                     <div className="metric-detail">
                       <span className="detail-label">Tokens:</span>
                       <span className="detail-value">
-                        {metric.tokens_sent} → {metric.tokens_received} ({metric.total_tokens} total)
+                        {metric.tokens_sent} sent → {metric.tokens_received} received ({metric.total_tokens} total)
                       </span>
                     </div>
                     <div className="metric-detail">
                       <span className="detail-label">Latency:</span>
-                      <span className="detail-value">{Math.round(metric.latency_ms)}ms</span>
+                      <span className="detail-value">{(metric.latency_ms / 1000).toFixed(2)}s</span>
                     </div>
                     {metric.error && (
                       <div className="metric-detail error">
@@ -132,6 +158,56 @@ function AdminPage() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal for call details */}
+      {selectedCall && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>LLM Call Details</h2>
+              <button className="modal-close" onClick={closeModal}>×</button>
+            </div>
+
+            {loadingCall ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
+                <div className="spinner"></div>
+              </div>
+            ) : (
+              <div className="modal-body">
+                <div className="modal-section">
+                  <h3>Metadata</h3>
+                  <div className="metadata-grid">
+                    <div><strong>Operation:</strong> {selectedCall.operation_type}</div>
+                    <div><strong>Model:</strong> {selectedCall.metadata?.model || 'N/A'}</div>
+                    <div><strong>Timestamp:</strong> {new Date(selectedCall.timestamp).toLocaleString()}</div>
+                    <div><strong>Status:</strong> {selectedCall.success ? '✓ Success' : '✗ Failed'}</div>
+                    <div><strong>Latency:</strong> {(selectedCall.latency_ms / 1000).toFixed(2)}s</div>
+                    <div><strong>Tokens Sent:</strong> {selectedCall.tokens_sent}</div>
+                    <div><strong>Tokens Received:</strong> {selectedCall.tokens_received}</div>
+                  </div>
+                </div>
+
+                <div className="modal-section">
+                  <h3>Prompt</h3>
+                  <pre className="code-block">{selectedCall.prompt}</pre>
+                </div>
+
+                <div className="modal-section">
+                  <h3>Response</h3>
+                  <pre className="code-block">{selectedCall.response_text}</pre>
+                </div>
+
+                {selectedCall.error && (
+                  <div className="modal-section error">
+                    <h3>Error</h3>
+                    <pre className="code-block">{selectedCall.error}</pre>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
