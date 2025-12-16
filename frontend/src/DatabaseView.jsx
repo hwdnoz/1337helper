@@ -2,8 +2,13 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './App.css'
 
-function DatabaseView() {
+function DatabaseView({ onLogout }) {
   const navigate = useNavigate()
+
+  const handleLogout = () => {
+    onLogout()
+    navigate('/login')
+  }
   const [metrics, setMetrics] = useState([])
   const [loading, setLoading] = useState(true)
   const [limit, setLimit] = useState(100)
@@ -128,6 +133,9 @@ function DatabaseView() {
           <button onClick={loadData}>Refresh</button>
           <button onClick={() => navigate('/admin')} style={{ background: '#555' }}>
             Back to Admin
+          </button>
+          <button onClick={handleLogout} style={{ background: '#d32f2f' }}>
+            Logout
           </button>
         </div>
       </div>

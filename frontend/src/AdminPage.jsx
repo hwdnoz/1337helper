@@ -2,8 +2,13 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './App.css'
 
-function AdminPage() {
+function AdminPage({ onLogout }) {
   const navigate = useNavigate()
+
+  const handleLogout = () => {
+    onLogout()
+    navigate('/login')
+  }
   const [metrics, setMetrics] = useState([])
   const [summary, setSummary] = useState(null)
   const [loadingMetrics, setLoadingMetrics] = useState(true)
@@ -69,6 +74,9 @@ function AdminPage() {
           <button onClick={loadMetrics}>Refresh Metrics</button>
           <button onClick={() => navigate('/')} style={{ background: '#555' }}>
             Back to Code Runner
+          </button>
+          <button onClick={handleLogout} style={{ background: '#d32f2f' }}>
+            Logout
           </button>
         </div>
       </div>
