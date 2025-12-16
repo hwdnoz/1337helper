@@ -4,6 +4,15 @@ import { python } from '@codemirror/lang-python'
 import { vim } from '@replit/codemirror-vim'
 import './App.css'
 
+const DEFAULT_LEETCODE_PROMPT = `Fetch the LeetCode problem #{PROBLEM_NUMBER} and provide a complete Python solution.
+
+Please structure your response as follows:
+1. Problem title and description
+2. A complete, working Python solution
+3. Time and space complexity analysis
+
+Return ONLY the Python code for the solution, properly formatted and ready to run. Include the problem description as a docstring at the top of the solution function.`
+
 function App() {
   const [code, setCode] = useState('')
   const [output, setOutput] = useState('')
@@ -14,6 +23,8 @@ function App() {
   const [loadingTestCases, setLoadingTestCases] = useState(false)
   const [loadingLeetcode, setLoadingLeetcode] = useState(false)
   const [loadingLlmPrompt, setLoadingLlmPrompt] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [solutionPrompt, setSolutionPrompt] = useState(DEFAULT_LEETCODE_PROMPT)
   const outputRef = useRef(null)
 
   useEffect(() => {
@@ -120,13 +131,28 @@ function App() {
     }
   }
 
+  const openSolutionPromptManager = () => {
+    if (!leetcodeNumber) {
+      alert('Please enter a problem number first')
+      return
+    }
+    setSidebarOpen(true)
+  }
+
   const solveLeetcode = async () => {
     setLoadingLeetcode(true)
+    setSidebarOpen(false)
     try {
+      // Replace {PROBLEM_NUMBER} placeholder with actual number
+      const customPrompt = solutionPrompt.replace(/{PROBLEM_NUMBER}/g, leetcodeNumber)
+
       const res = await fetch('http://localhost:5001/api/leetcode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ problem_number: leetcodeNumber })
+        body: JSON.stringify({
+          problem_number: leetcodeNumber,
+          custom_prompt: customPrompt
+        })
       })
       const data = await res.json()
       if (data.success) {
@@ -141,6 +167,10 @@ function App() {
     } finally {
       setLoadingLeetcode(false)
     }
+  }
+
+  const resetPromptToDefault = () => {
+    setSolutionPrompt(DEFAULT_LEETCODE_PROMPT)
   }
 
   const generateTestCases = async () => {
@@ -194,7 +224,7 @@ function App() {
               fontSize: '0.9rem'
             }}
           />
-          <button onClick={solveLeetcode}>Solve</button>
+          <button onClick={openSolutionPromptManager}>Solve</button>
         </div>
       </div>
       <div style={{
@@ -303,6 +333,54 @@ function App() {
         <div style={{ flex: '1', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
           <div style={{ marginBottom: '0.5rem', color: '#d4d4d4', flexShrink: 0 }}>Output</div>
           <pre ref={outputRef} style={{ flex: 1, minHeight: 0 }}>{output}</pre>
+        </div>
+      </div>
+
+      {/* Solution Prompt Manager Sidebar */}
+      {sidebarOpen && (
+        <div
+          className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <div className="sidebar-header">
+          <h2>Solution Prompt Manager</h2>
+          <button
+            className="sidebar-close"
+            onClick={() => setSidebarOpen(false)}
+          >
+            ×
+          </button>
+        </div>
+        <div className="sidebar-content">
+          <div className="sidebar-info">
+            Customize the prompt sent to the LLM when solving problem #{leetcodeNumber || 'N/A'}.
+            Use {'{PROBLEM_NUMBER}'} as a placeholder for the problem number.
+          </div>
+          <div className="sidebar-section">
+            <label>Prompt Template</label>
+            <textarea
+              className="sidebar-textarea"
+              value={solutionPrompt}
+              onChange={(e) => setSolutionPrompt(e.target.value)}
+              placeholder="Enter your custom prompt..."
+            />
+          </div>
+          <button onClick={resetPromptToDefault} style={{ alignSelf: 'flex-start' }}>
+            Reset to Default
+          </button>
+        </div>
+        <div className="sidebar-footer">
+          <button
+            onClick={() => setSidebarOpen(false)}
+            style={{ background: '#555' }}
+          >
+            Cancel
+          </button>
+          <button onClick={solveLeetcode}>
+            Solve Problem
+          </button>
         </div>
       </div>
     </div>

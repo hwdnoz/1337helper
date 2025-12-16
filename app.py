@@ -33,14 +33,18 @@ def run_code():
 @app.route('/api/leetcode', methods=['POST'])
 def solve_leetcode():
     problem_number = request.json.get('problem_number', '')
+    custom_prompt = request.json.get('custom_prompt', None)
 
     print("\n" + "="*80)
     print(f"LEETCODE SOLVER - Problem #{problem_number}")
     print("="*80)
 
     try:
-        # Use the LLM to fetch the problem description and generate a solution
-        fetch_prompt = f"""Fetch the LeetCode problem #{problem_number} and provide a complete Python solution.
+        # Use custom prompt if provided, otherwise use default
+        if custom_prompt:
+            fetch_prompt = custom_prompt
+        else:
+            fetch_prompt = f"""Fetch the LeetCode problem #{problem_number} and provide a complete Python solution.
 
 Please structure your response as follows:
 1. Problem title and description
