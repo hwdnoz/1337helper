@@ -21,6 +21,10 @@ function App() {
   const [sidebarMode, setSidebarMode] = useState('solution-prompt') // 'solution-prompt', 'test-case', 'llm-prompt'
   const [solutionPrompt, setSolutionPrompt] = useState(DEFAULT_LEETCODE_PROMPT)
   const [activePreset, setActivePreset] = useState('default')
+  const [lastUpdate, setLastUpdate] = useState(null)
+  const [cacheHit, setCacheHit] = useState(false)
+  const [lastTestCaseUpdate, setLastTestCaseUpdate] = useState(null)
+  const [testCaseCacheHit, setTestCaseCacheHit] = useState(false)
   const outputRef = useRef(null)
 
   useEffect(() => {
@@ -115,6 +119,8 @@ function App() {
       const data = await res.json()
       if (data.success) {
         setCode(data.code)
+        setLastUpdate(new Date())
+        setCacheHit(data.cache_hit || false)
       } else {
         console.error('LLM Error:', data.error)
         alert(`Error: ${data.error}`)
@@ -163,6 +169,8 @@ function App() {
       const data = await res.json()
       if (data.success) {
         setCode(data.code)
+        setLastUpdate(new Date())
+        setCacheHit(data.cache_hit || false)
       } else {
         console.error('LeetCode Error:', data.error)
         alert(`Error: ${data.error}`)
@@ -209,6 +217,8 @@ function App() {
       const data = await res.json()
       if (data.success) {
         setTestCase(data.test_cases)
+        setLastTestCaseUpdate(new Date())
+        setTestCaseCacheHit(data.cache_hit || false)
       } else {
         console.error('Generate Test Cases Error:', data.error)
         alert(`Error: ${data.error}`)
@@ -300,6 +310,23 @@ function App() {
             <button onClick={importTestCase}>Import Test Cases</button>
             <button onClick={clearTestCases}>Clear Test Cases</button>
           </div>
+          {lastUpdate && (
+            <div style={{
+              fontSize: '0.85rem',
+              color: cacheHit ? '#4caf50' : '#888',
+              padding: '0.25rem 0.5rem',
+              background: cacheHit ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
+              borderRadius: '2px',
+              marginBottom: '0.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              {cacheHit && <span style={{ fontSize: '1rem' }}>⚡</span>}
+              Last updated: {lastUpdate.toLocaleTimeString()}
+              {cacheHit && <span style={{ fontWeight: 'bold' }}>(from cache)</span>}
+            </div>
+          )}
           <div style={{ flex: 1, minHeight: 0 }}>
             <CodeMirror
               value={code}
@@ -358,6 +385,23 @@ function App() {
               </div>
               <div className="sidebar-section">
                 <label>Test Cases</label>
+                {lastTestCaseUpdate && (
+                  <div style={{
+                    fontSize: '0.85rem',
+                    color: testCaseCacheHit ? '#4caf50' : '#888',
+                    padding: '0.25rem 0.5rem',
+                    background: testCaseCacheHit ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
+                    borderRadius: '2px',
+                    marginBottom: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    {testCaseCacheHit && <span style={{ fontSize: '1rem' }}>⚡</span>}
+                    Last updated: {lastTestCaseUpdate.toLocaleTimeString()}
+                    {testCaseCacheHit && <span style={{ fontWeight: 'bold' }}>(from cache)</span>}
+                  </div>
+                )}
                 <textarea
                   className="sidebar-textarea"
                   value={testCase}
@@ -393,6 +437,23 @@ function App() {
               <div className="sidebar-info">
                 Enter instructions to modify your current code using AI.
               </div>
+              {lastUpdate && (
+                <div style={{
+                  fontSize: '0.85rem',
+                  color: cacheHit ? '#4caf50' : '#888',
+                  padding: '0.25rem 0.5rem',
+                  background: cacheHit ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
+                  borderRadius: '2px',
+                  marginBottom: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  {cacheHit && <span style={{ fontSize: '1rem' }}>⚡</span>}
+                  Last updated: {lastUpdate.toLocaleTimeString()}
+                  {cacheHit && <span style={{ fontWeight: 'bold' }}>(from cache)</span>}
+                </div>
+              )}
               <div className="sidebar-section">
                 <label>Modification Instructions</label>
                 <textarea

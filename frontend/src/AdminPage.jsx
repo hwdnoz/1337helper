@@ -16,6 +16,7 @@ function AdminPage({ onLogout }) {
   const [selectedCall, setSelectedCall] = useState(null)
   const [loadingCall, setLoadingCall] = useState(false)
   const [cacheStats, setCacheStats] = useState(null)
+  const [showDbDropdown, setShowDbDropdown] = useState(false)
 
   useEffect(() => {
     loadMetrics()
@@ -123,7 +124,7 @@ function AdminPage({ onLogout }) {
         tokensSent: metric.tokens_sent,
         tokensReceived: metric.tokens_received,
         totalTokens: metric.total_tokens,
-        cacheHit: metric.metadata?.cache_hit ? 1 : 0
+        cacheHit: metric.metadata?.cache_hit ? 1 : 0,
       }))
   }
 
@@ -134,7 +135,14 @@ function AdminPage({ onLogout }) {
       .map((metric) => ({
         name: new Date(metric.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         cacheHits: metric.metadata?.cache_hit ? 1 : 0,
-        cacheMisses: metric.metadata?.cache_hit === false ? 1 : 0
+        cacheMisses: metric.metadata?.cache_hit === false ? 1 : 0,
+        // Separate by operation type
+        leetcode_hit: metric.operation_type === 'leetcode_solve' && metric.metadata?.cache_hit ? 1 : 0,
+        leetcode_miss: metric.operation_type === 'leetcode_solve' && metric.metadata?.cache_hit === false ? 1 : 0,
+        testcase_hit: metric.operation_type === 'test_case_generation' && metric.metadata?.cache_hit ? 1 : 0,
+        testcase_miss: metric.operation_type === 'test_case_generation' && metric.metadata?.cache_hit === false ? 1 : 0,
+        codemod_hit: metric.operation_type === 'code_modification' && metric.metadata?.cache_hit ? 1 : 0,
+        codemod_miss: metric.operation_type === 'code_modification' && metric.metadata?.cache_hit === false ? 1 : 0,
       }))
   }
 
@@ -143,10 +151,34 @@ function AdminPage({ onLogout }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1 style={{ margin: 0 }}>Admin Dashboard</h1>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button onClick={() => navigate('/admin/database')}>
-            View Database
-          </button>
-          <button onClick={loadMetrics}>Refresh Metrics</button>
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => setShowDbDropdown(!showDbDropdown)}>
+              View Database ▼
+            </button>
+            {showDbDropdown && (
+              <div className="dropdown-menu">
+                <div
+                  className="dropdown-item"
+                  onClick={() => {
+                    navigate('/admin/metrics-database')
+                    setShowDbDropdown(false)
+                  }}
+                >
+                  Metrics Database
+                </div>
+                <div
+                  className="dropdown-item"
+                  onClick={() => {
+                    navigate('/admin/cache-database')
+                    setShowDbDropdown(false)
+                  }}
+                >
+                  Cache Database
+                </div>
+              </div>
+            )}
+          </div>
+          <button onClick={loadMetrics}>Refresh</button>
           <button onClick={() => navigate('/')} style={{ background: '#555' }}>
             Back to Code Runner
           </button>
@@ -250,7 +282,7 @@ function AdminPage({ onLogout }) {
           {/* Performance Chart */}
           {metrics.length > 0 && (
             <div className="admin-section">
-              <h2>Performance Over Time</h2>
+              <h2>LLM API Performance Over Time</h2>
               <ResponsiveContainer width="100%" height={400}>
                 <LineChart data={prepareChartData()} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#3e3e42" />
@@ -345,19 +377,60 @@ function AdminPage({ onLogout }) {
                   />
                   <Line
                     type="monotone"
-                    dataKey="cacheHits"
-                    stroke="#4caf50"
-                    name="Cache Hits"
+                    dataKey="leetcode_hit"
+                    stroke="#9c27b0"
+                    name="LeetCode Hits"
                     strokeWidth={2}
                     dot={{ r: 4 }}
+                    connectNulls
                   />
                   <Line
                     type="monotone"
-                    dataKey="cacheMisses"
-                    stroke="#ff9800"
-                    name="Cache Misses"
+                    dataKey="leetcode_miss"
+                    stroke="#ce93d8"
+                    name="LeetCode Misses"
                     strokeWidth={2}
                     dot={{ r: 4 }}
+                    strokeDasharray="5 5"
+                    connectNulls
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="testcase_hit"
+                    stroke="#ff9800"
+                    name="Test Case Hits"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    connectNulls
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="testcase_miss"
+                    stroke="#ffcc80"
+                    name="Test Case Misses"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    strokeDasharray="5 5"
+                    connectNulls
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="codemod_hit"
+                    stroke="#00bcd4"
+                    name="Code Mod Hits"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    connectNulls
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="codemod_miss"
+                    stroke="#80deea"
+                    name="Code Mod Misses"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    strokeDasharray="5 5"
+                    connectNulls
                   />
                 </LineChart>
               </ResponsiveContainer>

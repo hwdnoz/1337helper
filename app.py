@@ -63,10 +63,12 @@ Return ONLY the Python code for the solution, properly formatted and ready to ru
 
         # Check cache first
         cached_response = cache.get(fetch_prompt, 'leetcode_solve')
+        cache_hit = False
 
         if cached_response:
             print("\n*** CACHE HIT - Using cached response ***\n")
             response_text = cached_response['response_text']
+            cache_hit = True
 
             # Log cache hit
             logger.log_llm_call(
@@ -151,7 +153,7 @@ Return ONLY the Python code for the solution, properly formatted and ready to ru
         print(solution_code)
         print("-"*80 + "\n")
 
-        return jsonify({'success': True, 'code': solution_code})
+        return jsonify({'success': True, 'code': solution_code, 'cache_hit': cache_hit})
     except Exception as e:
         print(f"\nERROR: {str(e)}\n")
         return jsonify({'success': False, 'error': str(e)})
@@ -187,54 +189,86 @@ Return ONLY the test case code (without markdown formatting and without any comm
         print(test_prompt)
         print("-"*80)
 
-        # Track observability metrics
-        start_time = time.time()
-        error_msg = None
+        # Check cache first
+        cached_response = cache.get(test_prompt, 'test_case_generation')
+        cache_hit = False
 
-        try:
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=test_prompt
-            )
+        if cached_response:
+            print("\n*** CACHE HIT - Using cached response ***\n")
+            response_text = cached_response['response_text']
+            cache_hit = True
 
-            latency_ms = (time.time() - start_time) * 1000
-
-            print("\nRAW RESPONSE FROM GOOGLE AI:")
-            print("-"*80)
-            print(response.text)
-            print("-"*80)
-
-            # Estimate tokens
-            tokens_sent = len(test_prompt) // 4
-            tokens_received = len(response.text) // 4
-
-            # Log the call
+            # Log cache hit
             logger.log_llm_call(
                 operation_type='test_case_generation',
                 prompt=test_prompt,
-                response_text=response.text,
-                tokens_sent=tokens_sent,
-                tokens_received=tokens_received,
-                latency_ms=latency_ms,
-                error=error_msg,
-                metadata={'model': 'gemini-2.5-flash'}
-            )
-        except Exception as e:
-            latency_ms = (time.time() - start_time) * 1000
-            error_msg = str(e)
-            logger.log_llm_call(
-                operation_type='test_case_generation',
-                prompt=test_prompt,
-                response_text='',
-                tokens_sent=len(test_prompt) // 4,
+                response_text=response_text,
+                tokens_sent=0,
                 tokens_received=0,
-                latency_ms=latency_ms,
-                error=error_msg,
-                metadata={'model': 'gemini-2.5-flash'}
+                latency_ms=1,
+                error=None,
+                metadata={'model': 'gemini-2.5-flash', 'cache_hit': True}
             )
-            raise
+        else:
+            print("\n*** CACHE MISS - Calling LLM API ***\n")
 
-        test_cases = response.text.strip()
+            # Track observability metrics
+            start_time = time.time()
+            error_msg = None
+
+            try:
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=test_prompt
+                )
+
+                latency_ms = (time.time() - start_time) * 1000
+                response_text = response.text
+
+                print("\nRAW RESPONSE FROM GOOGLE AI:")
+                print("-"*80)
+                print(response_text)
+                print("-"*80)
+
+                # Estimate tokens
+                tokens_sent = len(test_prompt) // 4
+                tokens_received = len(response_text) // 4
+
+                # Cache the response
+                cache.set(
+                    test_prompt,
+                    'test_case_generation',
+                    response_text,
+                    metadata={'model': 'gemini-2.5-flash'}
+                )
+
+                # Log the call
+                logger.log_llm_call(
+                    operation_type='test_case_generation',
+                    prompt=test_prompt,
+                    response_text=response_text,
+                    tokens_sent=tokens_sent,
+                    tokens_received=tokens_received,
+                    latency_ms=latency_ms,
+                    error=error_msg,
+                    metadata={'model': 'gemini-2.5-flash', 'cache_hit': False}
+                )
+            except Exception as e:
+                latency_ms = (time.time() - start_time) * 1000
+                error_msg = str(e)
+                logger.log_llm_call(
+                    operation_type='test_case_generation',
+                    prompt=test_prompt,
+                    response_text='',
+                    tokens_sent=len(test_prompt) // 4,
+                    tokens_received=0,
+                    latency_ms=latency_ms,
+                    error=error_msg,
+                    metadata={'model': 'gemini-2.5-flash'}
+                )
+                raise
+
+        test_cases = response_text.strip()
 
         # Remove markdown code blocks if present
         if test_cases.startswith('```python'):
@@ -247,7 +281,7 @@ Return ONLY the test case code (without markdown formatting and without any comm
         print(test_cases)
         print("-"*80 + "\n")
 
-        return jsonify({'success': True, 'test_cases': test_cases})
+        return jsonify({'success': True, 'test_cases': test_cases, 'cache_hit': cache_hit})
     except Exception as e:
         print(f"\nERROR: {str(e)}\n")
         return jsonify({'success': False, 'error': str(e)})
@@ -290,54 +324,86 @@ Modified code (return ONLY the code, no explanations):"""
         print(full_prompt)
         print("-"*80)
 
-        # Track observability metrics
-        start_time = time.time()
-        error_msg = None
+        # Check cache first
+        cached_response = cache.get(full_prompt, 'code_modification')
+        cache_hit = False
 
-        try:
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=full_prompt
-            )
+        if cached_response:
+            print("\n*** CACHE HIT - Using cached response ***\n")
+            response_text = cached_response['response_text']
+            cache_hit = True
 
-            latency_ms = (time.time() - start_time) * 1000
-
-            print("\nRAW RESPONSE FROM GOOGLE AI:")
-            print("-"*80)
-            print(response.text)
-            print("-"*80)
-
-            # Estimate tokens (rough approximation: 1 token ≈ 4 characters)
-            tokens_sent = len(full_prompt) // 4
-            tokens_received = len(response.text) // 4
-
-            # Log the call
+            # Log cache hit
             logger.log_llm_call(
                 operation_type='code_modification',
                 prompt=full_prompt,
-                response_text=response.text,
-                tokens_sent=tokens_sent,
-                tokens_received=tokens_received,
-                latency_ms=latency_ms,
-                error=error_msg,
-                metadata={'model': 'gemini-2.5-flash'}
-            )
-        except Exception as e:
-            latency_ms = (time.time() - start_time) * 1000
-            error_msg = str(e)
-            logger.log_llm_call(
-                operation_type='code_modification',
-                prompt=full_prompt,
-                response_text='',
-                tokens_sent=len(full_prompt) // 4,
+                response_text=response_text,
+                tokens_sent=0,
                 tokens_received=0,
-                latency_ms=latency_ms,
-                error=error_msg,
-                metadata={'model': 'gemini-2.5-flash'}
+                latency_ms=1,
+                error=None,
+                metadata={'model': 'gemini-2.5-flash', 'cache_hit': True}
             )
-            raise
+        else:
+            print("\n*** CACHE MISS - Calling LLM API ***\n")
 
-        modified_code = response.text.strip()
+            # Track observability metrics
+            start_time = time.time()
+            error_msg = None
+
+            try:
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=full_prompt
+                )
+
+                latency_ms = (time.time() - start_time) * 1000
+                response_text = response.text
+
+                print("\nRAW RESPONSE FROM GOOGLE AI:")
+                print("-"*80)
+                print(response_text)
+                print("-"*80)
+
+                # Estimate tokens (rough approximation: 1 token ≈ 4 characters)
+                tokens_sent = len(full_prompt) // 4
+                tokens_received = len(response_text) // 4
+
+                # Cache the response
+                cache.set(
+                    full_prompt,
+                    'code_modification',
+                    response_text,
+                    metadata={'model': 'gemini-2.5-flash'}
+                )
+
+                # Log the call
+                logger.log_llm_call(
+                    operation_type='code_modification',
+                    prompt=full_prompt,
+                    response_text=response_text,
+                    tokens_sent=tokens_sent,
+                    tokens_received=tokens_received,
+                    latency_ms=latency_ms,
+                    error=error_msg,
+                    metadata={'model': 'gemini-2.5-flash', 'cache_hit': False}
+                )
+            except Exception as e:
+                latency_ms = (time.time() - start_time) * 1000
+                error_msg = str(e)
+                logger.log_llm_call(
+                    operation_type='code_modification',
+                    prompt=full_prompt,
+                    response_text='',
+                    tokens_sent=len(full_prompt) // 4,
+                    tokens_received=0,
+                    latency_ms=latency_ms,
+                    error=error_msg,
+                    metadata={'model': 'gemini-2.5-flash'}
+                )
+                raise
+
+        modified_code = response_text.strip()
 
         # Remove markdown code blocks if present
         if modified_code.startswith('```python'):
@@ -350,7 +416,7 @@ Modified code (return ONLY the code, no explanations):"""
         print(modified_code)
         print("-"*80 + "\n")
 
-        return jsonify({'success': True, 'code': modified_code})
+        return jsonify({'success': True, 'code': modified_code, 'cache_hit': cache_hit})
     except Exception as e:
         print(f"\nERROR: {str(e)}\n")
         return jsonify({'success': False, 'error': str(e)})

@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import App from './App'
 import AdminPage from './AdminPage'
-import DatabaseView from './DatabaseView'
+import MetricsDatabaseView from './MetricsDatabaseView'
+import CacheDatabaseView from './CacheDatabaseView'
 import Login from './Login'
 import ProtectedRoute from './ProtectedRoute'
 
@@ -32,10 +33,18 @@ function AppWithAuth() {
           }
         />
         <Route
-          path="/admin/database"
+          path="/admin/metrics-database"
           element={
             <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <DatabaseView onLogout={handleLogout} />
+              <MetricsDatabaseView onLogout={handleLogout} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/cache-database"
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <CacheDatabaseView onLogout={handleLogout} />
             </ProtectedRoute>
           }
         />
