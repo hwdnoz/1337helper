@@ -3,15 +3,7 @@ import CodeMirror from '@uiw/react-codemirror'
 import { python } from '@codemirror/lang-python'
 import { vim } from '@replit/codemirror-vim'
 import './App.css'
-
-const DEFAULT_LEETCODE_PROMPT = `Fetch the LeetCode problem #{PROBLEM_NUMBER} and provide a complete Python solution.
-
-Please structure your response as follows:
-1. Problem title and description
-2. A complete, working Python solution
-3. Time and space complexity analysis
-
-Return ONLY the Python code for the solution, properly formatted and ready to run. Include the problem description as a docstring at the top of the solution function.`
+import { DEFAULT_LEETCODE_PROMPT, PROMPT_PRESETS } from './promptPresets'
 
 function App() {
   const [code, setCode] = useState('')
@@ -171,6 +163,11 @@ function App() {
 
   const resetPromptToDefault = () => {
     setSolutionPrompt(DEFAULT_LEETCODE_PROMPT)
+  }
+
+  const applyPreset = (preset) => {
+    const modifiedPrompt = PROMPT_PRESETS[preset] || DEFAULT_LEETCODE_PROMPT
+    setSolutionPrompt(modifiedPrompt)
   }
 
   const generateTestCases = async () => {
@@ -358,6 +355,31 @@ function App() {
             Customize the prompt sent to the LLM when solving problem #{leetcodeNumber || 'N/A'}.
             Use {'{PROBLEM_NUMBER}'} as a placeholder for the problem number.
           </div>
+
+          <div className="sidebar-section">
+            <label>Quick Presets</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
+              <button onClick={() => applyPreset('no-comments')} style={{ padding: '0.5rem', fontSize: '0.85rem' }}>
+                No Comments
+              </button>
+              <button onClick={() => applyPreset('minimal-comments')} style={{ padding: '0.5rem', fontSize: '0.85rem' }}>
+                Minimal Comments
+              </button>
+              <button onClick={() => applyPreset('concise')} style={{ padding: '0.5rem', fontSize: '0.85rem' }}>
+                Concise
+              </button>
+              <button onClick={() => applyPreset('detailed')} style={{ padding: '0.5rem', fontSize: '0.85rem' }}>
+                Detailed
+              </button>
+              <button onClick={() => applyPreset('optimal')} style={{ padding: '0.5rem', fontSize: '0.85rem' }}>
+                Optimal Solution
+              </button>
+              <button onClick={resetPromptToDefault} style={{ padding: '0.5rem', fontSize: '0.85rem', background: '#555' }}>
+                Default
+              </button>
+            </div>
+          </div>
+
           <div className="sidebar-section">
             <label>Prompt Template</label>
             <textarea
@@ -367,9 +389,6 @@ function App() {
               placeholder="Enter your custom prompt..."
             />
           </div>
-          <button onClick={resetPromptToDefault} style={{ alignSelf: 'flex-start' }}>
-            Reset to Default
-          </button>
         </div>
         <div className="sidebar-footer">
           <button
