@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import CodeMirror from '@uiw/react-codemirror'
 import { python } from '@codemirror/lang-python'
 import { vim } from '@replit/codemirror-vim'
@@ -6,6 +7,7 @@ import './App.css'
 import { DEFAULT_LEETCODE_PROMPT, PROMPT_PRESETS } from './promptPresets'
 
 function App() {
+  const navigate = useNavigate()
   const [code, setCode] = useState('')
   const [output, setOutput] = useState('')
   const [vimEnabled, setVimEnabled] = useState(true)
@@ -16,12 +18,9 @@ function App() {
   const [loadingLeetcode, setLoadingLeetcode] = useState(false)
   const [loadingLlmPrompt, setLoadingLlmPrompt] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarMode, setSidebarMode] = useState('solution-prompt') // 'solution-prompt', 'test-case', 'llm-prompt', 'admin'
+  const [sidebarMode, setSidebarMode] = useState('solution-prompt') // 'solution-prompt', 'test-case', 'llm-prompt'
   const [solutionPrompt, setSolutionPrompt] = useState(DEFAULT_LEETCODE_PROMPT)
   const [activePreset, setActivePreset] = useState('default')
-  const [metrics, setMetrics] = useState([])
-  const [summary, setSummary] = useState(null)
-  const [loadingMetrics, setLoadingMetrics] = useState(false)
   const outputRef = useRef(null)
 
   useEffect(() => {
@@ -143,35 +142,6 @@ function App() {
     } else {
       setSidebarMode(mode)
       setSidebarOpen(true)
-
-      // Load metrics when opening admin panel
-      if (mode === 'admin') {
-        loadMetrics()
-      }
-    }
-  }
-
-  const loadMetrics = async () => {
-    setLoadingMetrics(true)
-    try {
-      const [metricsRes, summaryRes] = await Promise.all([
-        fetch('http://localhost:5001/api/observability/metrics?limit=50'),
-        fetch('http://localhost:5001/api/observability/summary')
-      ])
-
-      const metricsData = await metricsRes.json()
-      const summaryData = await summaryRes.json()
-
-      if (metricsData.success) {
-        setMetrics(metricsData.metrics)
-      }
-      if (summaryData.success) {
-        setSummary(summaryData.summary)
-      }
-    } catch (error) {
-      console.error('Failed to load metrics:', error)
-    } finally {
-      setLoadingMetrics(false)
     }
   }
 
@@ -277,8 +247,8 @@ function App() {
             Solution Prompt
           </button>
           <button
-            className={`sidebar-toggle-btn ${sidebarOpen && sidebarMode === 'admin' ? 'active' : ''}`}
-            onClick={() => toggleSidebar('admin')}
+            className="sidebar-toggle-btn"
+            onClick={() => navigate('/admin')}
           >
             Admin
           </button>
@@ -370,7 +340,6 @@ function App() {
             {sidebarMode === 'test-case' && 'Test Cases'}
             {sidebarMode === 'llm-prompt' && 'LLM Prompt'}
             {sidebarMode === 'solution-prompt' && 'Solution Prompt Manager'}
-            {sidebarMode === 'admin' && 'Admin Dashboard'}
           </h2>
           <button
             className="sidebar-close"
@@ -498,106 +467,6 @@ function App() {
               </button>
               <button onClick={solveLeetcode}>
                 Solve Problem
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* Admin Panel */}
-        {sidebarMode === 'admin' && (
-          <>
-            <div className="sidebar-content">
-              {loadingMetrics ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
-                  <div className="spinner"></div>
-                </div>
-              ) : (
-                <>
-                  {/* Summary Stats */}
-                  {summary && (
-                    <div className="sidebar-section">
-                      <label>Summary Statistics</label>
-                      <div className="admin-stats-grid">
-                        <div className="stat-card">
-                          <div className="stat-label">Total Calls</div>
-                          <div className="stat-value">{summary.total_calls}</div>
-                        </div>
-                        <div className="stat-card">
-                          <div className="stat-label">Success Rate</div>
-                          <div className="stat-value">
-                            {summary.total_calls > 0
-                              ? Math.round((summary.successful_calls / summary.total_calls) * 100)
-                              : 0}%
-                          </div>
-                        </div>
-                        <div className="stat-card">
-                          <div className="stat-label">Total Tokens</div>
-                          <div className="stat-value">{summary.total_tokens.toLocaleString()}</div>
-                        </div>
-                        <div className="stat-card">
-                          <div className="stat-label">Avg Latency</div>
-                          <div className="stat-value">{summary.avg_latency_ms}ms</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Operation Breakdown */}
-                  {summary && summary.operation_breakdown && (
-                    <div className="sidebar-section">
-                      <label>Operation Breakdown</label>
-                      <div className="operation-breakdown">
-                        {Object.entries(summary.operation_breakdown).map(([op, count]) => (
-                          <div key={op} className="operation-row">
-                            <span className="operation-name">{op.replace(/_/g, ' ')}</span>
-                            <span className="operation-count">{count}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Recent Calls */}
-                  <div className="sidebar-section">
-                    <label>Recent LLM Calls ({metrics.length})</label>
-                    <div className="metrics-list">
-                      {metrics.map((metric, idx) => (
-                        <div key={idx} className="metric-card">
-                          <div className="metric-header">
-                            <span className={`metric-status ${metric.success ? 'success' : 'error'}`}>
-                              {metric.success ? '✓' : '✗'}
-                            </span>
-                            <span className="metric-operation">{metric.operation_type}</span>
-                            <span className="metric-time">{new Date(metric.timestamp).toLocaleTimeString()}</span>
-                          </div>
-                          <div className="metric-details">
-                            <div className="metric-detail">
-                              <span className="detail-label">Tokens:</span>
-                              <span className="detail-value">
-                                {metric.tokens_sent} → {metric.tokens_received} ({metric.total_tokens} total)
-                              </span>
-                            </div>
-                            <div className="metric-detail">
-                              <span className="detail-label">Latency:</span>
-                              <span className="detail-value">{Math.round(metric.latency_ms)}ms</span>
-                            </div>
-                            {metric.error && (
-                              <div className="metric-detail error">
-                                <span className="detail-label">Error:</span>
-                                <span className="detail-value">{metric.error}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-            <div className="sidebar-footer">
-              <button onClick={loadMetrics}>
-                Refresh Metrics
               </button>
             </div>
           </>

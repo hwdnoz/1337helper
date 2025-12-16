@@ -363,3 +363,25 @@ pre {
   color: #d4d4d4;
   font-family: monospace;
 }
+
+/* Admin Page Styles */
+.admin-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.admin-section {
+  background: #1e1e1e;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  padding: 1.5rem;
+}
+
+.admin-section h2 {
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  color: #d4d4d4;
+}
