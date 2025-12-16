@@ -17,10 +17,12 @@ function AdminPage({ onLogout }) {
   const [loadingCall, setLoadingCall] = useState(false)
   const [cacheStats, setCacheStats] = useState(null)
   const [showDbDropdown, setShowDbDropdown] = useState(false)
+  const [cacheEnabled, setCacheEnabled] = useState(true)
 
   useEffect(() => {
     loadMetrics()
     loadCacheStats()
+    loadCacheEnabled()
   }, [])
 
   const loadMetrics = async () => {
@@ -111,6 +113,38 @@ function AdminPage({ onLogout }) {
     } catch (error) {
       console.error('Failed to clear expired cache:', error)
       alert('Failed to clear expired cache')
+    }
+  }
+
+  const loadCacheEnabled = async () => {
+    try {
+      const res = await fetch('http://localhost:5001/api/cache/enabled')
+      const data = await res.json()
+
+      if (data.success) {
+        setCacheEnabled(data.enabled)
+      }
+    } catch (error) {
+      console.error('Failed to load cache enabled status:', error)
+    }
+  }
+
+  const toggleCache = async () => {
+    try {
+      const res = await fetch('http://localhost:5001/api/cache/enabled', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !cacheEnabled })
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        setCacheEnabled(data.enabled)
+        loadCacheStats()
+      }
+    } catch (error) {
+      console.error('Failed to toggle cache:', error)
+      alert('Failed to toggle cache')
     }
   }
 
@@ -228,7 +262,18 @@ function AdminPage({ onLogout }) {
             <div className="admin-section">
               <h2 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>Cache Statistics</span>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <button
+                    onClick={toggleCache}
+                    style={{
+                      background: cacheEnabled ? '#4caf50' : '#757575',
+                      fontSize: '0.85rem',
+                      padding: '0.4rem 0.8rem',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    {cacheEnabled ? '✓ Cache Enabled' : 'Cache Disabled'}
+                  </button>
                   <button
                     onClick={clearExpiredCache}
                     style={{ background: '#f57c00', fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}

@@ -8,6 +8,7 @@ class PromptCache:
     def __init__(self, db_path='llm_cache.db', ttl_hours=24):
         self.db_path = db_path
         self.ttl_hours = ttl_hours
+        self.enabled = True  # Cache is enabled by default
         self._init_database()
 
     def _init_database(self):
@@ -44,6 +45,9 @@ class PromptCache:
         return hashlib.sha256(content.encode()).hexdigest()
 
     def get(self, prompt, operation_type):
+        if not self.enabled:
+            return None
+
         prompt_hash = self._hash_prompt(prompt, operation_type)
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
@@ -77,6 +81,9 @@ class PromptCache:
         return None
 
     def set(self, prompt, operation_type, response_text, metadata=None):
+        if not self.enabled:
+            return
+
         prompt_hash = self._hash_prompt(prompt, operation_type)
         metadata_json = json.dumps(metadata) if metadata else None
 
@@ -155,8 +162,16 @@ class PromptCache:
             'total_accesses': stats[1] or 0,
             'avg_accesses_per_entry': round(stats[2], 2) if stats[2] else 0,
             'operation_breakdown': operation_breakdown,
-            'ttl_hours': self.ttl_hours
+            'ttl_hours': self.ttl_hours,
+            'enabled': self.enabled
         }
+
+    def set_enabled(self, enabled):
+        self.enabled = enabled
+        return self.enabled
+
+    def is_enabled(self):
+        return self.enabled
 
     def get_all_entries(self, limit=100):
         conn = sqlite3.connect(self.db_path)

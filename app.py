@@ -489,5 +489,23 @@ def clear_expired_cache():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/api/cache/enabled', methods=['GET'])
+def get_cache_enabled():
+    """Get cache enabled status"""
+    try:
+        return jsonify({'success': True, 'enabled': cache.is_enabled()})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/cache/enabled', methods=['POST'])
+def set_cache_enabled():
+    """Set cache enabled status"""
+    try:
+        enabled = request.json.get('enabled', True)
+        cache.set_enabled(enabled)
+        return jsonify({'success': True, 'enabled': cache.is_enabled()})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
