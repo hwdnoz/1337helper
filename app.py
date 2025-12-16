@@ -1,11 +1,13 @@
 import io
 import os
+import time
 from contextlib import redirect_stdout
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from observability import logger
 
 load_dotenv()
 
@@ -58,15 +60,52 @@ Return ONLY the Python code for the solution, properly formatted and ready to ru
         print(fetch_prompt)
         print("-"*80)
 
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=fetch_prompt
-        )
+        # Track observability metrics
+        start_time = time.time()
+        error_msg = None
 
-        print("\nRAW RESPONSE FROM GOOGLE AI:")
-        print("-"*80)
-        print(response.text)
-        print("-"*80)
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=fetch_prompt
+            )
+
+            latency_ms = (time.time() - start_time) * 1000
+
+            print("\nRAW RESPONSE FROM GOOGLE AI:")
+            print("-"*80)
+            print(response.text)
+            print("-"*80)
+
+            # Estimate tokens
+            tokens_sent = len(fetch_prompt) // 4
+            tokens_received = len(response.text) // 4
+
+            # Log the call
+            logger.log_llm_call(
+                operation_type='leetcode_solve',
+                prompt=fetch_prompt,
+                response_text=response.text,
+                tokens_sent=tokens_sent,
+                tokens_received=tokens_received,
+                latency_ms=latency_ms,
+                error=error_msg,
+                metadata={'model': 'gemini-2.5-flash', 'problem_number': problem_number}
+            )
+        except Exception as e:
+            latency_ms = (time.time() - start_time) * 1000
+            error_msg = str(e)
+            logger.log_llm_call(
+                operation_type='leetcode_solve',
+                prompt=fetch_prompt,
+                response_text='',
+                tokens_sent=len(fetch_prompt) // 4,
+                tokens_received=0,
+                latency_ms=latency_ms,
+                error=error_msg,
+                metadata={'model': 'gemini-2.5-flash', 'problem_number': problem_number}
+            )
+            raise
 
         solution_code = response.text.strip()
 
@@ -117,15 +156,52 @@ Return ONLY the test case code (without markdown formatting and without any comm
         print(test_prompt)
         print("-"*80)
 
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=test_prompt
-        )
+        # Track observability metrics
+        start_time = time.time()
+        error_msg = None
 
-        print("\nRAW RESPONSE FROM GOOGLE AI:")
-        print("-"*80)
-        print(response.text)
-        print("-"*80)
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=test_prompt
+            )
+
+            latency_ms = (time.time() - start_time) * 1000
+
+            print("\nRAW RESPONSE FROM GOOGLE AI:")
+            print("-"*80)
+            print(response.text)
+            print("-"*80)
+
+            # Estimate tokens
+            tokens_sent = len(test_prompt) // 4
+            tokens_received = len(response.text) // 4
+
+            # Log the call
+            logger.log_llm_call(
+                operation_type='test_case_generation',
+                prompt=test_prompt,
+                response_text=response.text,
+                tokens_sent=tokens_sent,
+                tokens_received=tokens_received,
+                latency_ms=latency_ms,
+                error=error_msg,
+                metadata={'model': 'gemini-2.5-flash'}
+            )
+        except Exception as e:
+            latency_ms = (time.time() - start_time) * 1000
+            error_msg = str(e)
+            logger.log_llm_call(
+                operation_type='test_case_generation',
+                prompt=test_prompt,
+                response_text='',
+                tokens_sent=len(test_prompt) // 4,
+                tokens_received=0,
+                latency_ms=latency_ms,
+                error=error_msg,
+                metadata={'model': 'gemini-2.5-flash'}
+            )
+            raise
 
         test_cases = response.text.strip()
 
@@ -183,15 +259,52 @@ Modified code (return ONLY the code, no explanations):"""
         print(full_prompt)
         print("-"*80)
 
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=full_prompt
-        )
+        # Track observability metrics
+        start_time = time.time()
+        error_msg = None
 
-        print("\nRAW RESPONSE FROM GOOGLE AI:")
-        print("-"*80)
-        print(response.text)
-        print("-"*80)
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=full_prompt
+            )
+
+            latency_ms = (time.time() - start_time) * 1000
+
+            print("\nRAW RESPONSE FROM GOOGLE AI:")
+            print("-"*80)
+            print(response.text)
+            print("-"*80)
+
+            # Estimate tokens (rough approximation: 1 token ≈ 4 characters)
+            tokens_sent = len(full_prompt) // 4
+            tokens_received = len(response.text) // 4
+
+            # Log the call
+            logger.log_llm_call(
+                operation_type='code_modification',
+                prompt=full_prompt,
+                response_text=response.text,
+                tokens_sent=tokens_sent,
+                tokens_received=tokens_received,
+                latency_ms=latency_ms,
+                error=error_msg,
+                metadata={'model': 'gemini-2.5-flash'}
+            )
+        except Exception as e:
+            latency_ms = (time.time() - start_time) * 1000
+            error_msg = str(e)
+            logger.log_llm_call(
+                operation_type='code_modification',
+                prompt=full_prompt,
+                response_text='',
+                tokens_sent=len(full_prompt) // 4,
+                tokens_received=0,
+                latency_ms=latency_ms,
+                error=error_msg,
+                metadata={'model': 'gemini-2.5-flash'}
+            )
+            raise
 
         modified_code = response.text.strip()
 
@@ -209,6 +322,25 @@ Modified code (return ONLY the code, no explanations):"""
         return jsonify({'success': True, 'code': modified_code})
     except Exception as e:
         print(f"\nERROR: {str(e)}\n")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/observability/metrics', methods=['GET'])
+def get_metrics():
+    """Get recent LLM call metrics"""
+    try:
+        limit = request.args.get('limit', 100, type=int)
+        metrics = logger.get_metrics(limit=limit)
+        return jsonify({'success': True, 'metrics': metrics})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/observability/summary', methods=['GET'])
+def get_summary():
+    """Get summary statistics"""
+    try:
+        summary = logger.get_summary_stats()
+        return jsonify({'success': True, 'summary': summary})
+    except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
 if __name__ == '__main__':

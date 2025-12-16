@@ -231,3 +231,135 @@ pre {
   border-color: #1177bb;
   font-weight: 600;
 }
+
+/* Admin Panel Styles */
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.stat-card {
+  background: #1e1e1e;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0e639c;
+}
+
+.operation-breakdown {
+  background: #1e1e1e;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  padding: 0.75rem;
+}
+
+.operation-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #2d2d2d;
+}
+
+.operation-row:last-child {
+  border-bottom: none;
+}
+
+.operation-name {
+  color: #d4d4d4;
+  text-transform: capitalize;
+  font-size: 0.9rem;
+}
+
+.operation-count {
+  color: #0e639c;
+  font-weight: 600;
+}
+
+.metrics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.metric-card {
+  background: #1e1e1e;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  padding: 0.75rem;
+}
+
+.metric-header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #2d2d2d;
+}
+
+.metric-status {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.metric-status.success {
+  color: #4caf50;
+}
+
+.metric-status.error {
+  color: #f44336;
+}
+
+.metric-operation {
+  flex: 1;
+  color: #d4d4d4;
+  font-size: 0.9rem;
+  text-transform: capitalize;
+}
+
+.metric-time {
+  color: #888;
+  font-size: 0.8rem;
+}
+
+.metric-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.metric-detail {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.metric-detail.error {
+  color: #f44336;
+}
+
+.detail-label {
+  color: #888;
+}
+
+.detail-value {
+  color: #d4d4d4;
+  font-family: monospace;
+}
