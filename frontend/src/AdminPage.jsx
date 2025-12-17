@@ -257,26 +257,6 @@ function AdminPage({ onLogout }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1 style={{ margin: 0 }}>Admin Dashboard</h1>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label style={{ fontSize: '0.9rem', color: '#888' }}>Model:</label>
-            <select
-              value={currentModel}
-              onChange={(e) => changeModel(e.target.value)}
-              style={{
-                background: '#2d2d30',
-                color: '#d4d4d4',
-                border: '1px solid #3e3e42',
-                padding: '0.4rem 0.6rem',
-                borderRadius: '4px',
-                fontSize: '0.85rem',
-                cursor: 'pointer'
-              }}
-            >
-              {availableModels.map(model => (
-                <option key={model} value={model}>{model}</option>
-              ))}
-            </select>
-          </div>
           <div style={{ position: 'relative' }}>
             <button onClick={() => setShowDbDropdown(!showDbDropdown)}>
               View Database ▼
@@ -304,19 +284,6 @@ function AdminPage({ onLogout }) {
               </div>
             )}
           </div>
-          <button
-            onClick={toggleCache}
-            style={{ background: cacheEnabled ? '#1b5e20' : '#d32f2f' }}
-          >
-            {cacheEnabled ? 'Cache: ON' : 'Cache: OFF'}
-          </button>
-          <button
-            onClick={toggleModelAwareCache}
-            style={{ background: modelAwareCache ? '#0277bd' : '#888' }}
-            title={modelAwareCache ? 'Each model has separate cache' : 'All models share the same cache'}
-          >
-            {modelAwareCache ? 'Model-Aware: ON' : 'Model-Aware: OFF'}
-          </button>
           <button onClick={loadMetrics}>Refresh</button>
           <button onClick={() => navigate('/')} style={{ background: '#555' }}>
             Back to Code Runner
@@ -325,6 +292,74 @@ function AdminPage({ onLogout }) {
             Logout
           </button>
         </div>
+      </div>
+
+      {/* Admin Controls Section */}
+      <div style={{
+        background: '#1e1e1e',
+        border: '1px solid #3e3e42',
+        borderRadius: '4px',
+        padding: '1rem',
+        marginBottom: '1.5rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '1rem',
+        flexWrap: 'wrap'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <label style={{ fontSize: '0.9rem', color: '#888', minWidth: '50px' }}>Model:</label>
+          <select
+            value={currentModel}
+            onChange={(e) => changeModel(e.target.value)}
+            style={{
+              background: '#2d2d30',
+              color: '#d4d4d4',
+              border: '1px solid #3e3e42',
+              padding: '0.5rem 0.8rem',
+              borderRadius: '4px',
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              minWidth: '180px'
+            }}
+          >
+            {availableModels.map(model => (
+              <option key={model} value={model}>{model}</option>
+            ))}
+          </select>
+        </div>
+
+        <button
+          onClick={toggleCache}
+          style={{
+            background: cacheEnabled ? '#2e7d32' : '#c62828',
+            color: '#fff',
+            border: 'none',
+            padding: '0.5rem 1rem',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '0.85rem',
+            fontWeight: '500'
+          }}
+        >
+          Cache: {cacheEnabled ? 'ON' : 'OFF'}
+        </button>
+
+        <button
+          onClick={toggleModelAwareCache}
+          style={{
+            background: modelAwareCache ? '#1976d2' : '#616161',
+            color: '#fff',
+            border: 'none',
+            padding: '0.5rem 1rem',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '0.85rem',
+            fontWeight: '500'
+          }}
+          title={modelAwareCache ? 'Each model has separate cache' : 'All models share the same cache'}
+        >
+          Model-Aware: {modelAwareCache ? 'ON' : 'OFF'}
+        </button>
       </div>
 
       {loadingMetrics ? (
