@@ -18,6 +18,7 @@ function AdminPage({ onLogout }) {
   const [cacheStats, setCacheStats] = useState(null)
   const [showDbDropdown, setShowDbDropdown] = useState(false)
   const [cacheEnabled, setCacheEnabled] = useState(true)
+  const [modelAwareCache, setModelAwareCache] = useState(true)
   const [currentModel, setCurrentModel] = useState('gemini-2.5-flash')
   const [availableModels] = useState([
     'gemini-2.5-flash',
@@ -28,6 +29,7 @@ function AdminPage({ onLogout }) {
     loadMetrics()
     loadCacheStats()
     loadCacheEnabled()
+    loadModelAwareCache()
     loadCurrentModel()
   }, [])
 
@@ -154,6 +156,38 @@ function AdminPage({ onLogout }) {
     }
   }
 
+  const loadModelAwareCache = async () => {
+    try {
+      const res = await fetch('http://localhost:5001/api/cache/model-aware')
+      const data = await res.json()
+
+      if (data.success) {
+        setModelAwareCache(data.model_aware)
+      }
+    } catch (error) {
+      console.error('Failed to load model-aware cache status:', error)
+    }
+  }
+
+  const toggleModelAwareCache = async () => {
+    try {
+      const res = await fetch('http://localhost:5001/api/cache/model-aware', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model_aware: !modelAwareCache })
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        setModelAwareCache(data.model_aware)
+        loadCacheStats()
+      }
+    } catch (error) {
+      console.error('Failed to toggle model-aware cache:', error)
+      alert('Failed to toggle model-aware cache')
+    }
+  }
+
   const loadCurrentModel = async () => {
     try {
       const res = await fetch('http://localhost:5001/api/model')
@@ -270,6 +304,19 @@ function AdminPage({ onLogout }) {
               </div>
             )}
           </div>
+          <button
+            onClick={toggleCache}
+            style={{ background: cacheEnabled ? '#1b5e20' : '#d32f2f' }}
+          >
+            {cacheEnabled ? 'Cache: ON' : 'Cache: OFF'}
+          </button>
+          <button
+            onClick={toggleModelAwareCache}
+            style={{ background: modelAwareCache ? '#0277bd' : '#888' }}
+            title={modelAwareCache ? 'Each model has separate cache' : 'All models share the same cache'}
+          >
+            {modelAwareCache ? 'Model-Aware: ON' : 'Model-Aware: OFF'}
+          </button>
           <button onClick={loadMetrics}>Refresh</button>
           <button onClick={() => navigate('/')} style={{ background: '#555' }}>
             Back to Code Runner

@@ -138,6 +138,9 @@ function CacheDatabaseView({ onLogout }) {
                 <th onClick={() => handleSort('operation_type')} className="sortable">
                   Operation {sortColumn === 'operation_type' && (sortDirection === 'asc' ? '↑' : '↓')}
                 </th>
+                <th onClick={() => handleSort('model')} className="sortable">
+                  Model {sortColumn === 'model' && (sortDirection === 'asc' ? '↑' : '↓')}
+                </th>
                 <th onClick={() => handleSort('prompt_hash')} className="sortable">
                   Hash {sortColumn === 'prompt_hash' && (sortDirection === 'asc' ? '↑' : '↓')}
                 </th>
@@ -156,6 +159,7 @@ function CacheDatabaseView({ onLogout }) {
               <tr className="filter-row">
                 <th><input type="text" placeholder="Filter..." onChange={(e) => handleFilterChange('id', e.target.value)} /></th>
                 <th><input type="text" placeholder="Filter..." onChange={(e) => handleFilterChange('operation_type', e.target.value)} /></th>
+                <th><input type="text" placeholder="Filter..." onChange={(e) => handleFilterChange('model', e.target.value)} /></th>
                 <th><input type="text" placeholder="Filter..." onChange={(e) => handleFilterChange('prompt_hash', e.target.value)} /></th>
                 <th><input type="text" placeholder="Filter..." onChange={(e) => handleFilterChange('created_at', e.target.value)} /></th>
                 <th><input type="text" placeholder="Filter..." onChange={(e) => handleFilterChange('accessed_at', e.target.value)} /></th>
@@ -169,6 +173,7 @@ function CacheDatabaseView({ onLogout }) {
                 <tr key={row.id}>
                   <td>{row.id}</td>
                   <td>{row.operation_type}</td>
+                  <td style={{ fontSize: '0.85rem' }}>{row.model || 'unknown'}</td>
                   <td style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>
                     {row.prompt_hash.substring(0, 12)}...
                   </td>

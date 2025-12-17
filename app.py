@@ -65,7 +65,7 @@ Return ONLY the Python code for the solution, properly formatted and ready to ru
         print("-"*80)
 
         # Check cache first
-        cached_response = cache.get(fetch_prompt, 'leetcode_solve')
+        cached_response = cache.get(fetch_prompt, 'leetcode_solve', current_model)
         cache_hit = False
 
         if cached_response:
@@ -114,7 +114,8 @@ Return ONLY the Python code for the solution, properly formatted and ready to ru
                     fetch_prompt,
                     'leetcode_solve',
                     response_text,
-                    metadata={'model': current_model, 'problem_number': problem_number}
+                    metadata={'model': current_model, 'problem_number': problem_number},
+                    model=current_model
                 )
 
                 # Log the call
@@ -193,7 +194,7 @@ Return ONLY the test case code (without markdown formatting and without any comm
         print("-"*80)
 
         # Check cache first
-        cached_response = cache.get(test_prompt, 'test_case_generation')
+        cached_response = cache.get(test_prompt, 'test_case_generation', current_model)
         cache_hit = False
 
         if cached_response:
@@ -242,7 +243,8 @@ Return ONLY the test case code (without markdown formatting and without any comm
                     test_prompt,
                     'test_case_generation',
                     response_text,
-                    metadata={'model': current_model}
+                    metadata={'model': current_model},
+                    model=current_model
                 )
 
                 # Log the call
@@ -328,7 +330,7 @@ Modified code (return ONLY the code, no explanations):"""
         print("-"*80)
 
         # Check cache first
-        cached_response = cache.get(full_prompt, 'code_modification')
+        cached_response = cache.get(full_prompt, 'code_modification', current_model)
         cache_hit = False
 
         if cached_response:
@@ -377,7 +379,8 @@ Modified code (return ONLY the code, no explanations):"""
                     full_prompt,
                     'code_modification',
                     response_text,
-                    metadata={'model': current_model}
+                    metadata={'model': current_model},
+                    model=current_model
                 )
 
                 # Log the call
@@ -507,6 +510,24 @@ def set_cache_enabled():
         enabled = request.json.get('enabled', True)
         cache.set_enabled(enabled)
         return jsonify({'success': True, 'enabled': cache.is_enabled()})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/cache/model-aware', methods=['GET'])
+def get_cache_model_aware():
+    """Get model-aware cache status"""
+    try:
+        return jsonify({'success': True, 'model_aware': cache.is_model_aware_cache()})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/cache/model-aware', methods=['POST'])
+def set_cache_model_aware():
+    """Set model-aware cache status"""
+    try:
+        model_aware = request.json.get('model_aware', True)
+        cache.set_model_aware_cache(model_aware)
+        return jsonify({'success': True, 'model_aware': cache.is_model_aware_cache()})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 

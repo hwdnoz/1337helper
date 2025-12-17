@@ -9,6 +9,7 @@ class PromptCache:
         self.db_path = db_path
         self.ttl_hours = ttl_hours
         self.enabled = True  # Cache is enabled by default
+        self.model_aware_cache = True  # Model-aware caching is enabled by default
         self._init_database()
 
     def _init_database(self):
@@ -21,6 +22,7 @@ class PromptCache:
                 prompt_hash TEXT UNIQUE NOT NULL,
                 prompt TEXT NOT NULL,
                 operation_type TEXT NOT NULL,
+                model TEXT,
                 response_text TEXT NOT NULL,
                 metadata TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -40,15 +42,21 @@ class PromptCache:
         conn.commit()
         conn.close()
 
-    def _hash_prompt(self, prompt, operation_type):
-        content = f"{operation_type}:{prompt}"
+    def _hash_prompt(self, prompt, operation_type, model=None):
+        # Only include model in hash if model_aware_cache is enabled
+        if self.model_aware_cache:
+            model_str = model if model else 'unknown'
+            content = f"{operation_type}:{model_str}:{prompt}"
+        else:
+            # Model-agnostic caching - don't include model in hash
+            content = f"{operation_type}:{prompt}"
         return hashlib.sha256(content.encode()).hexdigest()
 
-    def get(self, prompt, operation_type):
+    def get(self, prompt, operation_type, model=None):
         if not self.enabled:
             return None
 
-        prompt_hash = self._hash_prompt(prompt, operation_type)
+        prompt_hash = self._hash_prompt(prompt, operation_type, model)
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -80,11 +88,11 @@ class PromptCache:
         conn.close()
         return None
 
-    def set(self, prompt, operation_type, response_text, metadata=None):
+    def set(self, prompt, operation_type, response_text, metadata=None, model=None):
         if not self.enabled:
             return
 
-        prompt_hash = self._hash_prompt(prompt, operation_type)
+        prompt_hash = self._hash_prompt(prompt, operation_type, model)
         metadata_json = json.dumps(metadata) if metadata else None
 
         conn = sqlite3.connect(self.db_path)
@@ -92,11 +100,11 @@ class PromptCache:
 
         cursor.execute('''
             INSERT OR REPLACE INTO prompt_cache (
-                prompt_hash, prompt, operation_type, response_text, metadata,
+                prompt_hash, prompt, operation_type, model, response_text, metadata,
                 created_at, accessed_at, access_count
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
-            prompt_hash, prompt, operation_type, response_text, metadata_json,
+            prompt_hash, prompt, operation_type, model, response_text, metadata_json,
             datetime.utcnow().isoformat(),
             datetime.utcnow().isoformat(),
             1
@@ -163,7 +171,8 @@ class PromptCache:
             'avg_accesses_per_entry': round(stats[2], 2) if stats[2] else 0,
             'operation_breakdown': operation_breakdown,
             'ttl_hours': self.ttl_hours,
-            'enabled': self.enabled
+            'enabled': self.enabled,
+            'model_aware_cache': self.model_aware_cache
         }
 
     def set_enabled(self, enabled):
@@ -173,6 +182,13 @@ class PromptCache:
     def is_enabled(self):
         return self.enabled
 
+    def set_model_aware_cache(self, model_aware):
+        self.model_aware_cache = model_aware
+        return self.model_aware_cache
+
+    def is_model_aware_cache(self):
+        return self.model_aware_cache
+
     def get_all_entries(self, limit=100):
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
@@ -180,7 +196,7 @@ class PromptCache:
 
         cursor.execute('''
             SELECT
-                id, prompt_hash, operation_type,
+                id, prompt_hash, operation_type, model,
                 substr(prompt, 1, 100) as prompt_preview,
                 substr(response_text, 1, 100) as response_preview,
                 created_at, accessed_at, access_count
