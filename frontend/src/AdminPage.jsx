@@ -18,11 +18,17 @@ function AdminPage({ onLogout }) {
   const [cacheStats, setCacheStats] = useState(null)
   const [showDbDropdown, setShowDbDropdown] = useState(false)
   const [cacheEnabled, setCacheEnabled] = useState(true)
+  const [currentModel, setCurrentModel] = useState('gemini-2.5-flash')
+  const [availableModels] = useState([
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite'
+  ])
 
   useEffect(() => {
     loadMetrics()
     loadCacheStats()
     loadCacheEnabled()
+    loadCurrentModel()
   }, [])
 
   const loadMetrics = async () => {
@@ -148,6 +154,38 @@ function AdminPage({ onLogout }) {
     }
   }
 
+  const loadCurrentModel = async () => {
+    try {
+      const res = await fetch('http://localhost:5001/api/model')
+      const data = await res.json()
+
+      if (data.success) {
+        setCurrentModel(data.model)
+      }
+    } catch (error) {
+      console.error('Failed to load current model:', error)
+    }
+  }
+
+  const changeModel = async (model) => {
+    try {
+      const res = await fetch('http://localhost:5001/api/model', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model })
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        setCurrentModel(data.model)
+        alert(`Model changed to ${data.model}`)
+      }
+    } catch (error) {
+      console.error('Failed to change model:', error)
+      alert('Failed to change model')
+    }
+  }
+
   const prepareChartData = () => {
     return metrics
       .slice()
@@ -184,7 +222,27 @@ function AdminPage({ onLogout }) {
     <div className="app">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1 style={{ margin: 0 }}>Admin Dashboard</h1>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label style={{ fontSize: '0.9rem', color: '#888' }}>Model:</label>
+            <select
+              value={currentModel}
+              onChange={(e) => changeModel(e.target.value)}
+              style={{
+                background: '#2d2d30',
+                color: '#d4d4d4',
+                border: '1px solid #3e3e42',
+                padding: '0.4rem 0.6rem',
+                borderRadius: '4px',
+                fontSize: '0.85rem',
+                cursor: 'pointer'
+              }}
+            >
+              {availableModels.map(model => (
+                <option key={model} value={model}>{model}</option>
+              ))}
+            </select>
+          </div>
           <div style={{ position: 'relative' }}>
             <button onClick={() => setShowDbDropdown(!showDbDropdown)}>
               View Database ▼

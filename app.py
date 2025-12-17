@@ -18,6 +18,9 @@ CORS(app)
 # Configure Google AI
 client = genai.Client(api_key=os.getenv('GOOGLE_API_KEY'))
 
+# Current model (can be changed dynamically)
+current_model = 'gemini-2.5-flash'
+
 @app.route('/api/code', methods=['GET'])
 def get_code():
     return jsonify({'code': open('two_sum.py').read()})
@@ -79,7 +82,7 @@ Return ONLY the Python code for the solution, properly formatted and ready to ru
                 tokens_received=0,
                 latency_ms=1,
                 error=None,
-                metadata={'model': 'gemini-2.5-flash-lite', 'problem_number': problem_number, 'cache_hit': True}
+                metadata={'model': current_model, 'problem_number': problem_number, 'cache_hit': True}
             )
         else:
             print("\n*** CACHE MISS - Calling LLM API ***\n")
@@ -90,7 +93,7 @@ Return ONLY the Python code for the solution, properly formatted and ready to ru
 
             try:
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash-lite',
+                    model=current_model,
                     contents=fetch_prompt
                 )
 
@@ -111,7 +114,7 @@ Return ONLY the Python code for the solution, properly formatted and ready to ru
                     fetch_prompt,
                     'leetcode_solve',
                     response_text,
-                    metadata={'model': 'gemini-2.5-flash-lite', 'problem_number': problem_number}
+                    metadata={'model': current_model, 'problem_number': problem_number}
                 )
 
                 # Log the call
@@ -123,7 +126,7 @@ Return ONLY the Python code for the solution, properly formatted and ready to ru
                     tokens_received=tokens_received,
                     latency_ms=latency_ms,
                     error=error_msg,
-                    metadata={'model': 'gemini-2.5-flash-lite', 'problem_number': problem_number, 'cache_hit': False}
+                    metadata={'model': current_model, 'problem_number': problem_number, 'cache_hit': False}
                 )
             except Exception as e:
                 latency_ms = (time.time() - start_time) * 1000
@@ -136,7 +139,7 @@ Return ONLY the Python code for the solution, properly formatted and ready to ru
                     tokens_received=0,
                     latency_ms=latency_ms,
                     error=error_msg,
-                    metadata={'model': 'gemini-2.5-flash-lite', 'problem_number': problem_number, 'cache_hit': False}
+                    metadata={'model': current_model, 'problem_number': problem_number, 'cache_hit': False}
                 )
                 raise
 
@@ -207,7 +210,7 @@ Return ONLY the test case code (without markdown formatting and without any comm
                 tokens_received=0,
                 latency_ms=1,
                 error=None,
-                metadata={'model': 'gemini-2.5-flash-lite', 'cache_hit': True}
+                metadata={'model': current_model, 'cache_hit': True}
             )
         else:
             print("\n*** CACHE MISS - Calling LLM API ***\n")
@@ -218,7 +221,7 @@ Return ONLY the test case code (without markdown formatting and without any comm
 
             try:
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash-lite',
+                    model=current_model,
                     contents=test_prompt
                 )
 
@@ -239,7 +242,7 @@ Return ONLY the test case code (without markdown formatting and without any comm
                     test_prompt,
                     'test_case_generation',
                     response_text,
-                    metadata={'model': 'gemini-2.5-flash-lite'}
+                    metadata={'model': current_model}
                 )
 
                 # Log the call
@@ -251,7 +254,7 @@ Return ONLY the test case code (without markdown formatting and without any comm
                     tokens_received=tokens_received,
                     latency_ms=latency_ms,
                     error=error_msg,
-                    metadata={'model': 'gemini-2.5-flash-lite', 'cache_hit': False}
+                    metadata={'model': current_model, 'cache_hit': False}
                 )
             except Exception as e:
                 latency_ms = (time.time() - start_time) * 1000
@@ -264,7 +267,7 @@ Return ONLY the test case code (without markdown formatting and without any comm
                     tokens_received=0,
                     latency_ms=latency_ms,
                     error=error_msg,
-                    metadata={'model': 'gemini-2.5-flash-lite'}
+                    metadata={'model': current_model}
                 )
                 raise
 
@@ -342,7 +345,7 @@ Modified code (return ONLY the code, no explanations):"""
                 tokens_received=0,
                 latency_ms=1,
                 error=None,
-                metadata={'model': 'gemini-2.5-flash-lite', 'cache_hit': True}
+                metadata={'model': current_model, 'cache_hit': True}
             )
         else:
             print("\n*** CACHE MISS - Calling LLM API ***\n")
@@ -353,7 +356,7 @@ Modified code (return ONLY the code, no explanations):"""
 
             try:
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash-lite',
+                    model=current_model,
                     contents=full_prompt
                 )
 
@@ -374,7 +377,7 @@ Modified code (return ONLY the code, no explanations):"""
                     full_prompt,
                     'code_modification',
                     response_text,
-                    metadata={'model': 'gemini-2.5-flash-lite'}
+                    metadata={'model': current_model}
                 )
 
                 # Log the call
@@ -386,7 +389,7 @@ Modified code (return ONLY the code, no explanations):"""
                     tokens_received=tokens_received,
                     latency_ms=latency_ms,
                     error=error_msg,
-                    metadata={'model': 'gemini-2.5-flash-lite', 'cache_hit': False}
+                    metadata={'model': current_model, 'cache_hit': False}
                 )
             except Exception as e:
                 latency_ms = (time.time() - start_time) * 1000
@@ -399,7 +402,7 @@ Modified code (return ONLY the code, no explanations):"""
                     tokens_received=0,
                     latency_ms=latency_ms,
                     error=error_msg,
-                    metadata={'model': 'gemini-2.5-flash-lite'}
+                    metadata={'model': current_model}
                 )
                 raise
 
@@ -504,6 +507,29 @@ def set_cache_enabled():
         enabled = request.json.get('enabled', True)
         cache.set_enabled(enabled)
         return jsonify({'success': True, 'enabled': cache.is_enabled()})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/model', methods=['GET'])
+def get_current_model():
+    """Get current model"""
+    global current_model
+    try:
+        return jsonify({'success': True, 'model': current_model})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/model', methods=['POST'])
+def set_current_model():
+    """Set current model"""
+    global current_model
+    try:
+        model = request.json.get('model')
+        if model:
+            current_model = model
+            return jsonify({'success': True, 'model': current_model})
+        else:
+            return jsonify({'success': False, 'error': 'No model specified'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
