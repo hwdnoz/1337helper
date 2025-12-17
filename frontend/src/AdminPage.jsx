@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import AdminControls from './components/AdminControls'
+import SummaryStats from './components/SummaryStats'
+import PerformanceChart from './components/PerformanceChart'
+import CacheChart from './components/CacheChart'
 import './App.css'
 
 function AdminPage({ onLogout }) {
@@ -220,38 +223,6 @@ function AdminPage({ onLogout }) {
     }
   }
 
-  const prepareChartData = () => {
-    return metrics
-      .slice()
-      .reverse()
-      .map((metric, index) => ({
-        name: new Date(metric.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        latency: (metric.latency_ms / 1000).toFixed(2),
-        tokensSent: metric.tokens_sent,
-        tokensReceived: metric.tokens_received,
-        totalTokens: metric.total_tokens,
-        cacheHit: metric.metadata?.cache_hit ? 1 : 0,
-      }))
-  }
-
-  const prepareCacheChartData = () => {
-    return metrics
-      .slice()
-      .reverse()
-      .map((metric) => ({
-        name: new Date(metric.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        cacheHits: metric.metadata?.cache_hit ? 1 : 0,
-        cacheMisses: metric.metadata?.cache_hit === false ? 1 : 0,
-        // Separate by operation type
-        leetcode_hit: metric.operation_type === 'leetcode_solve' && metric.metadata?.cache_hit ? 1 : 0,
-        leetcode_miss: metric.operation_type === 'leetcode_solve' && metric.metadata?.cache_hit === false ? 1 : 0,
-        testcase_hit: metric.operation_type === 'test_case_generation' && metric.metadata?.cache_hit ? 1 : 0,
-        testcase_miss: metric.operation_type === 'test_case_generation' && metric.metadata?.cache_hit === false ? 1 : 0,
-        codemod_hit: metric.operation_type === 'code_modification' && metric.metadata?.cache_hit ? 1 : 0,
-        codemod_miss: metric.operation_type === 'code_modification' && metric.metadata?.cache_hit === false ? 1 : 0,
-      }))
-  }
-
   return (
     <div className="app">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -295,72 +266,15 @@ function AdminPage({ onLogout }) {
       </div>
 
       {/* Admin Controls Section */}
-      <div style={{
-        background: '#1e1e1e',
-        border: '1px solid #3e3e42',
-        borderRadius: '4px',
-        padding: '1rem',
-        marginBottom: '1.5rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '1rem',
-        flexWrap: 'wrap'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <label style={{ fontSize: '0.9rem', color: '#888', minWidth: '50px' }}>Model:</label>
-          <select
-            value={currentModel}
-            onChange={(e) => changeModel(e.target.value)}
-            style={{
-              background: '#2d2d30',
-              color: '#d4d4d4',
-              border: '1px solid #3e3e42',
-              padding: '0.5rem 0.8rem',
-              borderRadius: '4px',
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              minWidth: '180px'
-            }}
-          >
-            {availableModels.map(model => (
-              <option key={model} value={model}>{model}</option>
-            ))}
-          </select>
-        </div>
-
-        <button
-          onClick={toggleCache}
-          style={{
-            background: cacheEnabled ? '#2e7d32' : '#c62828',
-            color: '#fff',
-            border: 'none',
-            padding: '0.5rem 1rem',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '0.85rem',
-            fontWeight: '500'
-          }}
-        >
-          Cache: {cacheEnabled ? 'ON' : 'OFF'}
-        </button>
-
-        <button
-          onClick={toggleModelAwareCache}
-          style={{
-            background: modelAwareCache ? '#1976d2' : '#616161',
-            color: '#fff',
-            border: 'none',
-            padding: '0.5rem 1rem',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '0.85rem',
-            fontWeight: '500'
-          }}
-          title={modelAwareCache ? 'Each model has separate cache' : 'All models share the same cache'}
-        >
-          Model-Aware: {modelAwareCache ? 'ON' : 'OFF'}
-        </button>
-      </div>
+      <AdminControls
+        currentModel={currentModel}
+        availableModels={availableModels}
+        cacheEnabled={cacheEnabled}
+        modelAwareCache={modelAwareCache}
+        onModelChange={changeModel}
+        onToggleCache={toggleCache}
+        onToggleModelAwareCache={toggleModelAwareCache}
+      />
 
       {loadingMetrics ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
@@ -368,259 +282,21 @@ function AdminPage({ onLogout }) {
         </div>
       ) : (
         <div className="admin-container">
-          {/* Summary Stats */}
-          {summary && (
-            <div className="admin-section">
-              <h2>Summary Statistics</h2>
-              <div className="admin-stats-grid">
-                <div className="stat-card">
-                  <div className="stat-label">Total Calls</div>
-                  <div className="stat-value">{summary.total_calls}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-label">Success Rate</div>
-                  <div className="stat-value">
-                    {summary.total_calls > 0
-                      ? Math.round((summary.successful_calls / summary.total_calls) * 100)
-                      : 0}%
-                  </div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-label">Total Tokens</div>
-                  <div className="stat-value">{summary.total_tokens.toLocaleString()}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-label">Avg Latency</div>
-                  <div className="stat-value">{(summary.avg_latency_ms / 1000).toFixed(2)}s</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Cache Statistics */}
-          {cacheStats && (
-            <div className="admin-section">
-              <h2 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>Cache Statistics</span>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <button
-                    onClick={toggleCache}
-                    style={{
-                      background: cacheEnabled ? '#4caf50' : '#757575',
-                      fontSize: '0.85rem',
-                      padding: '0.4rem 0.8rem',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    {cacheEnabled ? '✓ Cache Enabled' : 'Cache Disabled'}
-                  </button>
-                  <button
-                    onClick={clearExpiredCache}
-                    style={{ background: '#f57c00', fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
-                  >
-                    Clear Expired
-                  </button>
-                  <button
-                    onClick={clearCache}
-                    style={{ background: '#d32f2f', fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
-                  >
-                    Clear All Cache
-                  </button>
-                </div>
-              </h2>
-              <div className="admin-stats-grid">
-                <div className="stat-card">
-                  <div className="stat-label">Cached Entries</div>
-                  <div className="stat-value">{cacheStats.total_entries}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-label">Total Accesses</div>
-                  <div className="stat-value">{cacheStats.total_accesses}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-label">Avg Accesses/Entry</div>
-                  <div className="stat-value">{cacheStats.avg_accesses_per_entry}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-label">TTL (Hours)</div>
-                  <div className="stat-value">{cacheStats.ttl_hours}h</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Operation Breakdown */}
-          {summary && summary.operation_breakdown && (
-            <div className="admin-section">
-              <h2>Operation Breakdown</h2>
-              <div className="operation-breakdown">
-                {Object.entries(summary.operation_breakdown).map(([op, count]) => (
-                  <div key={op} className="operation-row">
-                    <span className="operation-name">{op.replace(/_/g, ' ')}</span>
-                    <span className="operation-count">{count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Summary Stats, Cache Stats, and Operation Breakdown */}
+          <SummaryStats
+            summary={summary}
+            cacheStats={cacheStats}
+            cacheEnabled={cacheEnabled}
+            onToggleCache={toggleCache}
+            onClearExpiredCache={clearExpiredCache}
+            onClearCache={clearCache}
+          />
 
           {/* Performance Chart */}
-          {metrics.length > 0 && (
-            <div className="admin-section">
-              <h2>LLM API Performance Over Time</h2>
-              <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={prepareChartData()} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#3e3e42" />
-                  <XAxis
-                    dataKey="name"
-                    stroke="#888"
-                    style={{ fontSize: '0.8rem' }}
-                  />
-                  <YAxis
-                    yAxisId="left"
-                    stroke="#888"
-                    style={{ fontSize: '0.8rem' }}
-                    label={{ value: 'Latency (s)', angle: -90, position: 'insideLeft', style: { fill: '#888' } }}
-                  />
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    stroke="#888"
-                    style={{ fontSize: '0.8rem' }}
-                    label={{ value: 'Tokens', angle: 90, position: 'insideRight', style: { fill: '#888' } }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#252526',
-                      border: '1px solid #3e3e42',
-                      borderRadius: '4px',
-                      color: '#d4d4d4'
-                    }}
-                  />
-                  <Legend
-                    wrapperStyle={{ color: '#d4d4d4' }}
-                  />
-                  <Line
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="latency"
-                    stroke="#f44336"
-                    name="Latency (s)"
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                  />
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="tokensSent"
-                    stroke="#4caf50"
-                    name="Tokens Sent"
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                  />
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="tokensReceived"
-                    stroke="#2196f3"
-                    name="Tokens Received"
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+          <PerformanceChart metrics={metrics} />
 
           {/* Cache Hit/Miss Chart */}
-          {metrics.length > 0 && (
-            <div className="admin-section">
-              <h2>Cache Performance Over Time</h2>
-              <ResponsiveContainer width="100%" height={350}>
-                <LineChart data={prepareCacheChartData()} margin={{ top: 5, right: 90, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#3e3e42" />
-                  <XAxis
-                    dataKey="name"
-                    stroke="#888"
-                    style={{ fontSize: '0.8rem' }}
-                  />
-                  <YAxis
-                    stroke="#888"
-                    style={{ fontSize: '0.8rem' }}
-                    label={{ value: 'Count', angle: -90, position: 'insideLeft', style: { fill: '#888' } }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#252526',
-                      border: '1px solid #3e3e42',
-                      borderRadius: '4px',
-                      color: '#d4d4d4'
-                    }}
-                  />
-                  <Legend
-                    wrapperStyle={{ color: '#d4d4d4' }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="leetcode_hit"
-                    stroke="#9c27b0"
-                    name="LeetCode Hits"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    connectNulls
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="leetcode_miss"
-                    stroke="#ce93d8"
-                    name="LeetCode Misses"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    strokeDasharray="5 5"
-                    connectNulls
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="testcase_hit"
-                    stroke="#ff9800"
-                    name="Test Case Hits"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    connectNulls
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="testcase_miss"
-                    stroke="#ffcc80"
-                    name="Test Case Misses"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    strokeDasharray="5 5"
-                    connectNulls
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="codemod_hit"
-                    stroke="#00bcd4"
-                    name="Code Mod Hits"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    connectNulls
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="codemod_miss"
-                    stroke="#80deea"
-                    name="Code Mod Misses"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    strokeDasharray="5 5"
-                    connectNulls
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+          <CacheChart metrics={metrics} />
 
           {/* Recent Calls */}
           <div className="admin-section">
