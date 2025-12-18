@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './App.css'
+import { API_URL } from './config'
 
 function MetricsDatabaseView({ onLogout }) {
   const navigate = useNavigate()
@@ -24,7 +25,7 @@ function MetricsDatabaseView({ onLogout }) {
   const loadData = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`http://localhost:5001/api/observability/metrics?limit=${limit}`)
+      const res = await fetch(`${API_URL}/api/observability/metrics?limit=${limit}`)
       const data = await res.json()
 
       if (data.success) {

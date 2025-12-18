@@ -1,0 +1,22 @@
+# Backend .dockerignore
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.db
+.git/
+.gitignore
+*.md
+.DS_Store
+frontend/
+Dockerfile
+docker-compose.yml
+.dockerignore
+.env

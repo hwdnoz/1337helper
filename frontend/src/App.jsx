@@ -5,6 +5,7 @@ import { python } from '@codemirror/lang-python'
 import { vim } from '@replit/codemirror-vim'
 import './App.css'
 import { DEFAULT_LEETCODE_PROMPT, PROMPT_PRESETS } from './promptPresets'
+import { API_URL } from './config'
 
 function App() {
   const navigate = useNavigate()
@@ -28,7 +29,7 @@ function App() {
   const outputRef = useRef(null)
 
   useEffect(() => {
-    fetch('http://localhost:5001/api/code')
+    fetch(`${API_URL}/api/code`)
       .then(res => res.json())
       .then(data => setCode(data.code || ''))
   }, [])
@@ -40,7 +41,7 @@ function App() {
   }, [output])
 
   const runCode = async () => {
-    const res = await fetch('http://localhost:5001/api/run', {
+    const res = await fetch(`${API_URL}/api/run`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code })
@@ -111,7 +112,7 @@ function App() {
   const applyLlmPrompt = async () => {
     setLoadingLlmPrompt(true)
     try {
-      const res = await fetch('http://localhost:5001/api/llm', {
+      const res = await fetch(`${API_URL}/api/llm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: llmPrompt, code })
@@ -158,7 +159,7 @@ function App() {
       // Replace {PROBLEM_NUMBER} placeholder with actual number
       const customPrompt = solutionPrompt.replace(/{PROBLEM_NUMBER}/g, leetcodeNumber)
 
-      const res = await fetch('http://localhost:5001/api/leetcode', {
+      const res = await fetch(`${API_URL}/api/leetcode`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -209,7 +210,7 @@ function App() {
   const generateTestCases = async () => {
     setLoadingTestCases(true)
     try {
-      const res = await fetch('http://localhost:5001/api/generate-test-cases', {
+      const res = await fetch(`${API_URL}/api/generate-test-cases`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code })

@@ -5,6 +5,7 @@ import SummaryStats from './components/SummaryStats'
 import PerformanceChart from './components/PerformanceChart'
 import CacheChart from './components/CacheChart'
 import './App.css'
+import { API_URL } from './config'
 
 const AVAILABLE_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite']
 
@@ -44,8 +45,8 @@ function AdminPage({ onLogout }) {
     setLoadingMetrics(true)
     try {
       const [metricsRes, summaryRes] = await Promise.all([
-        fetch('http://localhost:5001/api/observability/metrics?limit=50'),
-        fetch('http://localhost:5001/api/observability/summary')
+        fetch(`${API_URL}/api/observability/metrics?limit=50`),
+        fetch(`${API_URL}/api/observability/summary`)
       ])
 
       const metricsData = await metricsRes.json()
@@ -67,7 +68,7 @@ function AdminPage({ onLogout }) {
   const loadCallDetails = async (callId) => {
     setLoadingCall(true)
     try {
-      const res = await fetch(`http://localhost:5001/api/observability/call/${callId}`)
+      const res = await fetch(`${API_URL}/api/observability/call/${callId}`)
       const data = await res.json()
 
       if (data.success) {
@@ -86,7 +87,7 @@ function AdminPage({ onLogout }) {
 
   const loadCacheStats = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/cache/stats')
+      const res = await fetch(`${API_URL}/api/cache/stats`)
       const data = await res.json()
 
       if (data.success) {
@@ -103,7 +104,7 @@ function AdminPage({ onLogout }) {
     }
 
     try {
-      const res = await fetch('http://localhost:5001/api/cache/clear', { method: 'POST' })
+      const res = await fetch(`${API_URL}/api/cache/clear`, { method: 'POST' })
       const data = await res.json()
 
       if (data.success) {
@@ -118,7 +119,7 @@ function AdminPage({ onLogout }) {
 
   const clearExpiredCache = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/cache/clear-expired', { method: 'POST' })
+      const res = await fetch(`${API_URL}/api/cache/clear-expired`, { method: 'POST' })
       const data = await res.json()
 
       if (data.success) {
@@ -133,7 +134,7 @@ function AdminPage({ onLogout }) {
 
   const loadCacheEnabled = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/cache/enabled')
+      const res = await fetch(`${API_URL}/api/cache/enabled`)
       const data = await res.json()
 
       if (data.success) {
@@ -146,7 +147,7 @@ function AdminPage({ onLogout }) {
 
   const toggleCache = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/cache/enabled', {
+      const res = await fetch(`${API_URL}/api/cache/enabled`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: !cacheEnabled })
@@ -165,7 +166,7 @@ function AdminPage({ onLogout }) {
 
   const loadModelAwareCache = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/cache/model-aware')
+      const res = await fetch(`${API_URL}/api/cache/model-aware`)
       const data = await res.json()
 
       if (data.success) {
@@ -178,7 +179,7 @@ function AdminPage({ onLogout }) {
 
   const toggleModelAwareCache = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/cache/model-aware', {
+      const res = await fetch(`${API_URL}/api/cache/model-aware`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model_aware: !modelAwareCache })
@@ -197,7 +198,7 @@ function AdminPage({ onLogout }) {
 
   const loadCurrentModel = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/current-model')
+      const res = await fetch(`${API_URL}/api/current-model`)
       const data = await res.json()
 
       if (data.success) {
@@ -210,7 +211,7 @@ function AdminPage({ onLogout }) {
 
   const changeModel = async (model) => {
     try {
-      const res = await fetch('http://localhost:5001/api/current-model', {
+      const res = await fetch(`${API_URL}/api/current-model`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model })
