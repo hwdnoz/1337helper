@@ -1,0 +1,23 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5102:3102"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    env_file:
+      - .env
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5101:3101"
+    env_file:
+      # overrides .env.docker used by frontend/Dockerfile
+      - ./frontend/.env.compose
+    depends_on:
+      - backend

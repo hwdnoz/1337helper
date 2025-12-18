@@ -1,4 +1,29 @@
-.PHONY: local-start local-stop docker-frontend docker-backend docker-start docker-stop docker-logs-backend docker-logs-frontend docker-remove-containers docker-remove-images
+.PHONY: help local-start local-stop docker-frontend docker-backend docker-start docker-stop docker-logs-backend docker-logs-frontend docker-remove-containers docker-remove-images compose-up compose-down
+
+.DEFAULT_GOAL := help
+
+help:
+	@echo "Available commands:"
+	@echo ""
+	@echo "Local Development:"
+	@echo "  make local-start          - Start backend and frontend locally"
+	@echo "  make local-stop           - Stop local processes"
+	@echo ""
+	@echo "Docker (Individual Containers):"
+	@echo "  make docker-backend       - Build and start backend container"
+	@echo "  make docker-frontend      - Build and start frontend container"
+	@echo "  make docker-start         - Start both containers"
+	@echo "  make docker-stop          - Stop both containers"
+	@echo "  make docker-logs-backend  - Follow backend logs"
+	@echo "  make docker-logs-frontend - Follow frontend logs"
+	@echo ""
+	@echo "Docker Compose:"
+	@echo "  make compose-up       - Start services with docker-compose"
+	@echo "  make compose-down     - Stop and remove containers"
+	@echo ""
+	@echo "Cleanup:"
+	@echo "  make docker-remove-containers - Remove Docker containers"
+	@echo "  make docker-remove-images     - Remove Docker images"
 
 local-start:
 	@lsof -ti :3102 | xargs kill 2>/dev/null || true
@@ -43,8 +68,16 @@ docker-remove-images:
 	@docker rmi -f 1337helper-backend 2>/dev/null || true
 	@docker rmi -f 1337helper-frontend 2>/dev/null || true
 
-# use with care; will stop and remove all containers and images, including those 
-# unrelated to this application; uncomment to use
+compose-up:
+	@docker-compose up
+
+compose-down:
+	@docker-compose down
+
+# use below with care; uncoment to use;
+# will stop and remove all containers, images, and volumes including those unrelated to this application
+
 # docker-prune:
 # 	@docker system prune -a
-
+# docker-remove-volumes:
+# 	@docker volume prune -f
