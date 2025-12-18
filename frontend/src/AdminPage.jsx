@@ -6,6 +6,8 @@ import PerformanceChart from './components/PerformanceChart'
 import CacheChart from './components/CacheChart'
 import './App.css'
 
+const AVAILABLE_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite']
+
 function AdminPage({ onLogout }) {
   const navigate = useNavigate()
 
@@ -13,20 +15,22 @@ function AdminPage({ onLogout }) {
     onLogout()
     navigate('/login')
   }
+
+  // Core data
   const [metrics, setMetrics] = useState([])
   const [summary, setSummary] = useState(null)
-  const [loadingMetrics, setLoadingMetrics] = useState(true)
-  const [selectedCall, setSelectedCall] = useState(null)
-  const [loadingCall, setLoadingCall] = useState(false)
   const [cacheStats, setCacheStats] = useState(null)
-  const [showDbDropdown, setShowDbDropdown] = useState(false)
+  const [loadingMetrics, setLoadingMetrics] = useState(true)
+
+  // Settings state
   const [cacheEnabled, setCacheEnabled] = useState(true)
   const [modelAwareCache, setModelAwareCache] = useState(true)
   const [currentModel, setCurrentModel] = useState('gemini-2.5-flash')
-  const [availableModels] = useState([
-    'gemini-2.5-flash',
-    'gemini-2.5-flash-lite'
-  ])
+
+  // UI state
+  const [selectedCall, setSelectedCall] = useState(null)
+  const [loadingCall, setLoadingCall] = useState(false)
+  const [showDbDropdown, setShowDbDropdown] = useState(false)
 
   useEffect(() => {
     loadMetrics()
@@ -193,7 +197,7 @@ function AdminPage({ onLogout }) {
 
   const loadCurrentModel = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/model')
+      const res = await fetch('http://localhost:5001/api/current-model')
       const data = await res.json()
 
       if (data.success) {
@@ -206,7 +210,7 @@ function AdminPage({ onLogout }) {
 
   const changeModel = async (model) => {
     try {
-      const res = await fetch('http://localhost:5001/api/model', {
+      const res = await fetch('http://localhost:5001/api/current-model', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model })
@@ -268,7 +272,7 @@ function AdminPage({ onLogout }) {
       {/* Admin Controls Section */}
       <AdminControls
         currentModel={currentModel}
-        availableModels={availableModels}
+        availableModels={AVAILABLE_MODELS}
         cacheEnabled={cacheEnabled}
         modelAwareCache={modelAwareCache}
         onModelChange={changeModel}
