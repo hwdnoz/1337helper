@@ -1,4 +1,21 @@
 services:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # Management UI
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
 
   proxy:
     image: nginx:alpine
@@ -15,10 +32,32 @@ services:
       dockerfile: Dockerfile
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     env_file:
       - .env
     volumes:
       - data:/app/data
+    depends_on:
+      - rabbitmq
+      - redis
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A celery_app worker --loglevel=info
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    env_file:
+      - .env
+    volumes:
+      - data:/app/data
+    depends_on:
+      - rabbitmq
+      - redis
 
   frontend:
     build:
@@ -34,3 +73,5 @@ services:
 
 volumes:
   data:
+  rabbitmq_data:
+  redis_data:
