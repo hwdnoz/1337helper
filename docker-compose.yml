@@ -17,6 +17,8 @@ services:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
     env_file:
       - .env
+    volumes:
+      - data:/app/data
 
   frontend:
     build:
@@ -29,3 +31,6 @@ services:
       - ./frontend/.env.compose
     depends_on:
       - backend
+
+volumes:
+  data:

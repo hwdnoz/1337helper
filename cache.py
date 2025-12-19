@@ -5,7 +5,7 @@ import time
 from datetime import datetime, timedelta
 
 class PromptCache:
-    def __init__(self, db_path='llm_cache.db', ttl_hours=24):
+    def __init__(self, db_path='data/llm_cache.db', ttl_hours=24):
         self.db_path = db_path
         self.ttl_hours = ttl_hours
         self.enabled = True  # Cache is enabled by default

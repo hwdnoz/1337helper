@@ -1,9 +1,11 @@
 venv/
 node_modules/
 .env
+data/
 *.db
 TODO.md
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+backups/
