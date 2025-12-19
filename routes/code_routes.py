@@ -11,7 +11,7 @@ client = genai.Client(api_key=os.getenv('GOOGLE_API_KEY'))
 
 @code_bp.route('/api/code', methods=['GET'])
 def get_code():
-    return jsonify({'code': open('two_sum.py').read()})
+    return jsonify({'code': open('default_problem.py').read()})
 
 @code_bp.route('/api/run', methods=['POST'])
 def run_code():
