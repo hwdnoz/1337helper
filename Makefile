@@ -2,6 +2,8 @@
 
 .DEFAULT_GOAL := help
 
+BACKEND_SCALE ?= 1
+
 help:
 	@echo "Available commands:"
 	@echo ""
@@ -18,8 +20,9 @@ help:
 	@echo "  make docker-logs-frontend - Follow frontend logs"
 	@echo ""
 	@echo "Docker Compose:"
-	@echo "  make compose-up       - Start services with docker-compose"
-	@echo "  make compose-down     - Stop and remove containers"
+	@echo "  make compose-up                   - Start services (default: BACKEND_SCALE=1)"
+	@echo "  make compose-up BACKEND_SCALE=3   - Start with 3 backend instances + nginx"
+	@echo "  make compose-down                 - Stop and remove containers"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make docker-remove-containers - Remove Docker containers"
@@ -69,7 +72,7 @@ docker-remove-images:
 	@docker rmi -f 1337helper-frontend 2>/dev/null || true
 
 compose-up:
-	@docker-compose up
+	@docker-compose up --scale backend=$(BACKEND_SCALE)
 
 compose-down:
 	@docker-compose down
