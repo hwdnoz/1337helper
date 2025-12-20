@@ -52,7 +52,7 @@ function AdminPage({ onLogout }) {
     setLoadingMetrics(true)
     try {
       const [metricsRes, summaryRes] = await Promise.all([
-        fetch(`${API_URL}/api/observability/metrics?limit=50`),
+        fetch(`${API_URL}/api/observability/metrics?limit=1000`),
         fetch(`${API_URL}/api/observability/summary`)
       ])
 

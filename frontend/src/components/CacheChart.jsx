@@ -2,11 +2,33 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 
 function CacheChart({ metrics }) {
   const prepareCacheChartData = () => {
+    // Check time span to determine date format
+    if (metrics.length === 0) return []
+
+    const firstTimestamp = new Date(metrics[metrics.length - 1].timestamp)
+    const lastTimestamp = new Date(metrics[0].timestamp)
+    const daysDiff = (lastTimestamp - firstTimestamp) / (1000 * 60 * 60 * 24)
+
+    // If span is more than 1 day, show date + time, otherwise just time
+    const formatLabel = (timestamp) => {
+      const date = new Date(timestamp)
+      if (daysDiff > 1) {
+        return date.toLocaleString([], {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      } else {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    }
+
     return metrics
       .slice()
       .reverse()
       .map((metric) => ({
-        name: new Date(metric.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        name: formatLabel(metric.timestamp),
         cacheHits: metric.metadata?.cache_hit ? 1 : 0,
         cacheMisses: metric.metadata?.cache_hit === false ? 1 : 0,
         leetcode_hit: metric.operation_type === 'leetcode_solve' && metric.metadata?.cache_hit ? 1 : 0,
