@@ -9,7 +9,7 @@ from cache import cache
 client = genai.Client(api_key=os.getenv('GOOGLE_API_KEY'))
 
 @celery_app.task(bind=True)
-def process_test_case_task(self, code, current_model):
+def process_test_case_task(self, code, current_model, use_cache=True, model_aware_cache=True):
     """
     Background task to generate test cases for code
     """
@@ -27,10 +27,12 @@ Generate exactly 3 simple test cases in the following format:
 - Print the results so they can be verified
 - Do NOT include any comments in the code
 
-Return ONLY the test case code (without markdown formatting and without any comments), ready to be pasted into the test case window."""
+IMPORTANT: Return ONLY the test case code, ready to be pasted into the test case window.
+
+DO NOT wrap the code in markdown code blocks. DO NOT include ```python or ``` markers. Return raw Python code only."""
 
         # Check cache
-        cached_response = cache.get(test_prompt, 'test_case_generation', current_model)
+        cached_response = cache.get(test_prompt, 'test_case_generation', current_model, use_cache, model_aware_cache)
 
         if cached_response:
             return {
@@ -74,7 +76,9 @@ Return ONLY the test case code (without markdown formatting and without any comm
             'test_case_generation',
             response_text,
             metadata={'model': current_model},
-            model=current_model
+            model=current_model,
+            use_cache=use_cache,
+            model_aware_cache=model_aware_cache
         )
 
         return {
@@ -103,12 +107,12 @@ Return ONLY the test case code (without markdown formatting and without any comm
         }
 
 @celery_app.task(bind=True)
-def process_code_modification_task(self, prompt, code, current_model):
+def process_code_modification_task(self, prompt, code, current_model, use_cache=True, model_aware_cache=True):
     """
     Background task to modify code based on user prompt
     """
     try:
-        full_prompt = f"""You are a code modification assistant. Given the following Python code and a user instruction, modify the code according to the instruction and return ONLY the modified code without any explanations or markdown formatting.
+        full_prompt = f"""You are a code modification assistant. Given the following Python code and a user instruction, modify the code according to the instruction.
 
 Current code:
 ```python
@@ -117,10 +121,13 @@ Current code:
 
 User instruction: {prompt}
 
-Modified code (return ONLY the code, no explanations):"""
+IMPORTANT: Return ONLY the modified Python code, ready to run.
+
+DO NOT include any explanations, comments, or text before or after the code.
+DO NOT wrap the code in markdown code blocks. DO NOT include ```python or ``` markers. Return raw Python code only."""
 
         # Check cache
-        cached_response = cache.get(full_prompt, 'code_modification', current_model)
+        cached_response = cache.get(full_prompt, 'code_modification', current_model, use_cache, model_aware_cache)
 
         if cached_response:
             return {
@@ -164,7 +171,9 @@ Modified code (return ONLY the code, no explanations):"""
             'code_modification',
             response_text,
             metadata={'model': current_model},
-            model=current_model
+            model=current_model,
+            use_cache=use_cache,
+            model_aware_cache=model_aware_cache
         )
 
         return {
@@ -193,7 +202,7 @@ Modified code (return ONLY the code, no explanations):"""
         }
 
 @celery_app.task(bind=True)
-def process_leetcode_task(self, problem_number, custom_prompt, current_model):
+def process_leetcode_task(self, problem_number, custom_prompt, current_model, use_cache=True, model_aware_cache=True):
     """
     Background task to process LeetCode problem
     """
@@ -209,10 +218,12 @@ Please structure your response as follows:
 2. A complete, working Python solution
 3. Time and space complexity analysis
 
-Return ONLY the Python code for the solution, properly formatted and ready to run. Include the problem description as a docstring at the top of the solution function."""
+IMPORTANT: Return ONLY the Python code for the solution, properly formatted and ready to run. Include the problem description as a docstring at the top of the solution function.
+
+DO NOT wrap the code in markdown code blocks. DO NOT include ```python or ``` markers. Return raw Python code only."""
 
         # Check cache
-        cached_response = cache.get(fetch_prompt, 'leetcode_solve', current_model)
+        cached_response = cache.get(fetch_prompt, 'leetcode_solve', current_model, use_cache, model_aware_cache)
 
         if cached_response:
             return {
@@ -249,7 +260,9 @@ Return ONLY the Python code for the solution, properly formatted and ready to ru
             'leetcode_solve',
             response_text,
             metadata={'problem_number': problem_number},
-            model=current_model
+            model=current_model,
+            use_cache=use_cache,
+            model_aware_cache=model_aware_cache
         )
 
         return {

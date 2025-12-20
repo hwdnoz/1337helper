@@ -8,8 +8,6 @@ class PromptCache:
     def __init__(self, db_path='data/llm_cache.db', ttl_hours=24):
         self.db_path = db_path
         self.ttl_hours = ttl_hours
-        self.enabled = True  # Cache is enabled by default
-        self.model_aware_cache = True  # Model-aware caching is enabled by default
         self._init_database()
 
     def _init_database(self):
@@ -42,9 +40,12 @@ class PromptCache:
         conn.commit()
         conn.close()
 
-    def _hash_prompt(self, prompt, operation_type, model=None):
+    def _hash_prompt(self, prompt, operation_type, model=None, model_aware_cache=None):
+        # Use provided model_aware_cache setting, or fall back to Redis setting
+        use_model_aware = model_aware_cache if model_aware_cache is not None else self.is_model_aware_cache()
+
         # Only include model in hash if model_aware_cache is enabled
-        if self.model_aware_cache:
+        if use_model_aware:
             model_str = model if model else 'unknown'
             content = f"{operation_type}:{model_str}:{prompt}"
         else:
@@ -52,11 +53,14 @@ class PromptCache:
             content = f"{operation_type}:{prompt}"
         return hashlib.sha256(content.encode()).hexdigest()
 
-    def get(self, prompt, operation_type, model=None):
-        if not self.enabled:
+    def get(self, prompt, operation_type, model=None, use_cache=None, model_aware_cache=None):
+        # Use provided use_cache setting, or fall back to Redis setting
+        should_use_cache = use_cache if use_cache is not None else self.is_enabled()
+
+        if not should_use_cache:
             return None
 
-        prompt_hash = self._hash_prompt(prompt, operation_type, model)
+        prompt_hash = self._hash_prompt(prompt, operation_type, model, model_aware_cache)
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -88,11 +92,14 @@ class PromptCache:
         conn.close()
         return None
 
-    def set(self, prompt, operation_type, response_text, metadata=None, model=None):
-        if not self.enabled:
+    def set(self, prompt, operation_type, response_text, metadata=None, model=None, use_cache=None, model_aware_cache=None):
+        # Use provided use_cache setting, or fall back to Redis setting
+        should_use_cache = use_cache if use_cache is not None else self.is_enabled()
+
+        if not should_use_cache:
             return
 
-        prompt_hash = self._hash_prompt(prompt, operation_type, model)
+        prompt_hash = self._hash_prompt(prompt, operation_type, model, model_aware_cache)
         metadata_json = json.dumps(metadata) if metadata else None
 
         conn = sqlite3.connect(self.db_path)
@@ -171,23 +178,63 @@ class PromptCache:
             'avg_accesses_per_entry': round(stats[2], 2) if stats[2] else 0,
             'operation_breakdown': operation_breakdown,
             'ttl_hours': self.ttl_hours,
-            'enabled': self.enabled,
-            'model_aware_cache': self.model_aware_cache
+            'enabled': self.is_enabled(),
+            'model_aware_cache': self.is_model_aware_cache()
         }
 
     def set_enabled(self, enabled):
-        self.enabled = enabled
-        return self.enabled
+        """Store cache enabled state in Redis (shared across all containers)"""
+        import redis
+        r = redis.Redis(host='redis', port=6379, db=1, decode_responses=True)
+        r.set('cache_enabled', '1' if enabled else '0')
+        return enabled
 
     def is_enabled(self):
-        return self.enabled
+        """Read cache enabled state from Redis (shared across all containers)"""
+        try:
+            import redis
+            r = redis.Redis(host='redis', port=6379, db=1, decode_responses=True)
+            value = r.get('cache_enabled')
+            return value == '1' if value is not None else True  # Default True
+        except:
+            # Fallback if Redis unavailable
+            return True
 
     def set_model_aware_cache(self, model_aware):
-        self.model_aware_cache = model_aware
-        return self.model_aware_cache
+        """Store model-aware cache state in Redis (shared across all containers)"""
+        import redis
+        r = redis.Redis(host='redis', port=6379, db=1, decode_responses=True)
+        r.set('model_aware_cache', '1' if model_aware else '0')
+        return model_aware
 
     def is_model_aware_cache(self):
-        return self.model_aware_cache
+        """Read model-aware cache state from Redis (shared across all containers)"""
+        try:
+            import redis
+            r = redis.Redis(host='redis', port=6379, db=1, decode_responses=True)
+            value = r.get('model_aware_cache')
+            return value == '1' if value is not None else True  # Default True
+        except:
+            # Fallback if Redis unavailable
+            return True
+
+    def set_current_model(self, model):
+        """Store current model in Redis (shared across all containers)"""
+        import redis
+        r = redis.Redis(host='redis', port=6379, db=1, decode_responses=True)
+        r.set('current_model', model)
+        return model
+
+    def get_current_model(self):
+        """Read current model from Redis (shared across all containers)"""
+        try:
+            import redis
+            r = redis.Redis(host='redis', port=6379, db=1, decode_responses=True)
+            model = r.get('current_model')
+            return model if model else 'gemini-2.5-flash'  # Default model
+        except:
+            # Fallback if Redis unavailable
+            return 'gemini-2.5-flash'
 
     def get_all_entries(self, limit=100):
         conn = sqlite3.connect(self.db_path)
