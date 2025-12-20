@@ -18,6 +18,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarMode, setSidebarMode] = useState('solution-prompt') // 'solution-prompt', 'test-case', 'llm-prompt'
   const [basePrompt, setBasePrompt] = useState('')
+  const [basePromptTemplate, setBasePromptTemplate] = useState('') // Raw template from backend
   const [promptModifier, setPromptModifier] = useState('')
   const [activePreset, setActivePreset] = useState('default')
   const [loadingBasePrompt, setLoadingBasePrompt] = useState(false)
@@ -39,7 +40,7 @@ function App() {
       .then(data => setCode(data.code || ''))
   }, [])
 
-  // Load base prompt from admin defaults
+  // Load base prompt template from admin defaults
   useEffect(() => {
     const loadBasePrompt = async () => {
       setLoadingBasePrompt(true)
@@ -47,7 +48,7 @@ function App() {
         const res = await fetch(`${API_URL}/api/prompts/leetcode_solve`)
         const data = await res.json()
         if (data.success) {
-          setBasePrompt(data.prompt.content)
+          setBasePromptTemplate(data.prompt.content)
         }
       } catch (error) {
         console.error('Failed to load base prompt:', error)
@@ -57,6 +58,16 @@ function App() {
     }
     loadBasePrompt()
   }, [])
+
+  // Update base prompt when template or leetcode number changes
+  useEffect(() => {
+    if (basePromptTemplate) {
+      const replaced = basePromptTemplate
+        .replace(/\{problem_number\}/g, leetcodeNumber || '{problem_number}')
+        .replace(/#\{problem_number\}/g, leetcodeNumber || '#{problem_number}')
+      setBasePrompt(replaced)
+    }
+  }, [basePromptTemplate, leetcodeNumber])
 
   useEffect(() => {
     if (outputRef.current) {
@@ -314,9 +325,8 @@ function App() {
   const solveLeetcode = async () => {
     setSidebarOpen(false)
     try {
-      // Combine base prompt + modifier, then replace placeholder
-      const combinedPrompt = (basePrompt + promptModifier).replace(/{PROBLEM_NUMBER}/g, leetcodeNumber)
-      const customPrompt = combinedPrompt.replace(/#{PROBLEM_NUMBER}/g, leetcodeNumber)
+      // Combine base prompt + modifier (placeholders already replaced in basePrompt)
+      const customPrompt = basePrompt + promptModifier
 
       // Always use async job endpoint
       const res = await fetch(`${API_URL}/api/jobs/leetcode`, {
