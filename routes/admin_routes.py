@@ -1,16 +1,8 @@
 from flask import Blueprint, request, jsonify
 from observability import logger
+from cache import cache
 
 admin_bp = Blueprint('admin', __name__)
-
-# Import current_model from app
-def get_current_model():
-    from app import current_model
-    return current_model
-
-def set_current_model_value(model):
-    import app
-    app.current_model = model
 
 @admin_bp.route('/api/observability/metrics', methods=['GET'])
 def get_metrics():
@@ -47,7 +39,7 @@ def get_call_details(call_id):
 def get_current_model_route():
     """Get current model"""
     try:
-        return jsonify({'success': True, 'model': get_current_model()})
+        return jsonify({'success': True, 'model': cache.get_current_model()})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
@@ -57,8 +49,8 @@ def set_current_model_route():
     try:
         model = request.json.get('model')
         if model:
-            set_current_model_value(model)
-            return jsonify({'success': True, 'model': get_current_model()})
+            cache.set_current_model(model)
+            return jsonify({'success': True, 'model': cache.get_current_model()})
         else:
             return jsonify({'success': False, 'error': 'No model specified'})
     except Exception as e:

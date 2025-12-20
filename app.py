@@ -12,9 +12,6 @@ CORS(app)
 # Configure Google AI
 client = genai.Client(api_key=os.getenv('GOOGLE_API_KEY'))
 
-# Current model (can be changed dynamically)
-current_model = 'gemini-2.5-flash'
-
 # Import and register blueprints
 from routes import admin_bp, cache_bp, code_bp, jobs_bp
 
