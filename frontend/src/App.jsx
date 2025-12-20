@@ -4,7 +4,7 @@ import CodeMirror from '@uiw/react-codemirror'
 import { python } from '@codemirror/lang-python'
 import { vim } from '@replit/codemirror-vim'
 import './App.css'
-import { DEFAULT_LEETCODE_PROMPT, PROMPT_PRESETS } from './promptPresets'
+import { PROMPT_MODIFIERS } from './promptPresets'
 import { API_URL } from './config'
 
 function App() {
@@ -17,8 +17,10 @@ function App() {
   const [leetcodeNumber, setLeetcodeNumber] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarMode, setSidebarMode] = useState('solution-prompt') // 'solution-prompt', 'test-case', 'llm-prompt'
-  const [solutionPrompt, setSolutionPrompt] = useState(DEFAULT_LEETCODE_PROMPT)
+  const [basePrompt, setBasePrompt] = useState('')
+  const [promptModifier, setPromptModifier] = useState('')
   const [activePreset, setActivePreset] = useState('default')
+  const [loadingBasePrompt, setLoadingBasePrompt] = useState(false)
   const [lastUpdate, setLastUpdate] = useState(null)
   const [cacheHit, setCacheHit] = useState(false)
   const [lastTestCaseUpdate, setLastTestCaseUpdate] = useState(null)
@@ -35,6 +37,25 @@ function App() {
     fetch(`${API_URL}/api/code`)
       .then(res => res.json())
       .then(data => setCode(data.code || ''))
+  }, [])
+
+  // Load base prompt from admin defaults
+  useEffect(() => {
+    const loadBasePrompt = async () => {
+      setLoadingBasePrompt(true)
+      try {
+        const res = await fetch(`${API_URL}/api/prompts/leetcode_solve`)
+        const data = await res.json()
+        if (data.success) {
+          setBasePrompt(data.prompt.content)
+        }
+      } catch (error) {
+        console.error('Failed to load base prompt:', error)
+      } finally {
+        setLoadingBasePrompt(false)
+      }
+    }
+    loadBasePrompt()
   }, [])
 
   useEffect(() => {
@@ -293,8 +314,9 @@ function App() {
   const solveLeetcode = async () => {
     setSidebarOpen(false)
     try {
-      // Replace {PROBLEM_NUMBER} placeholder with actual number
-      const customPrompt = solutionPrompt.replace(/{PROBLEM_NUMBER}/g, leetcodeNumber)
+      // Combine base prompt + modifier, then replace placeholder
+      const combinedPrompt = (basePrompt + promptModifier).replace(/{PROBLEM_NUMBER}/g, leetcodeNumber)
+      const customPrompt = combinedPrompt.replace(/#{PROBLEM_NUMBER}/g, leetcodeNumber)
 
       // Always use async job endpoint
       const res = await fetch(`${API_URL}/api/jobs/leetcode`, {
@@ -338,13 +360,13 @@ function App() {
   }
 
   const resetPromptToDefault = () => {
-    setSolutionPrompt(DEFAULT_LEETCODE_PROMPT)
+    setPromptModifier('')
     setActivePreset('default')
   }
 
   const applyPreset = (preset) => {
-    const modifiedPrompt = PROMPT_PRESETS[preset] || DEFAULT_LEETCODE_PROMPT
-    setSolutionPrompt(modifiedPrompt)
+    const modifier = PROMPT_MODIFIERS[preset] || ''
+    setPromptModifier(modifier)
     setActivePreset(preset)
   }
 
@@ -743,16 +765,30 @@ function App() {
               </div>
 
               <div className="sidebar-section">
-                <label>Prompt Template</label>
+                <label>Base Prompt (from Admin)</label>
                 <textarea
                   className="sidebar-textarea"
-                  value={solutionPrompt}
+                  value={basePrompt}
+                  onChange={(e) => setBasePrompt(e.target.value)}
+                  placeholder={loadingBasePrompt ? "Loading base prompt..." : "Base prompt from admin settings..."}
+                  style={{ height: '200px', marginBottom: '1rem' }}
+                  disabled={loadingBasePrompt}
+                />
+
+                <label>Style Modifier (Preset Additions)</label>
+                <textarea
+                  className="sidebar-textarea"
+                  value={promptModifier}
                   onChange={(e) => {
-                    setSolutionPrompt(e.target.value)
+                    setPromptModifier(e.target.value)
                     setActivePreset(null)
                   }}
-                  placeholder="Enter your custom prompt..."
+                  placeholder="Additional instructions from preset (e.g., 'no comments', 'detailed', etc.)..."
+                  style={{ height: '150px' }}
                 />
+                <div style={{ fontSize: '0.75rem', color: '#888', marginTop: '0.5rem' }}>
+                  These two prompts are combined and sent to the LLM
+                </div>
               </div>
             </div>
             <div className="sidebar-footer">

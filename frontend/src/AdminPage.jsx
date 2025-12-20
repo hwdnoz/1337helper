@@ -33,12 +33,19 @@ function AdminPage({ onLogout }) {
   const [loadingCall, setLoadingCall] = useState(false)
   const [showDbDropdown, setShowDbDropdown] = useState(false)
 
+  // Prompt management state
+  const [prompts, setPrompts] = useState([])
+  const [selectedPrompt, setSelectedPrompt] = useState(null)
+  const [editedPromptContent, setEditedPromptContent] = useState('')
+  const [savingPrompt, setSavingPrompt] = useState(false)
+
   useEffect(() => {
     loadMetrics()
     loadCacheStats()
     loadCacheEnabled()
     loadModelAwareCache()
     loadCurrentModel()
+    loadPrompts()
   }, [])
 
   const loadMetrics = async () => {
@@ -228,6 +235,79 @@ function AdminPage({ onLogout }) {
     }
   }
 
+  const loadPrompts = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/prompts`)
+      const data = await res.json()
+      if (data.success) {
+        setPrompts(data.prompts)
+      }
+    } catch (error) {
+      console.error('Failed to load prompts:', error)
+    }
+  }
+
+  const openPromptEditor = async (promptName) => {
+    try {
+      const res = await fetch(`${API_URL}/api/prompts/${promptName}`)
+      const data = await res.json()
+      if (data.success) {
+        setSelectedPrompt({ name: promptName, ...data.prompt })
+        setEditedPromptContent(data.prompt.content)
+      }
+    } catch (error) {
+      console.error('Failed to load prompt:', error)
+    }
+  }
+
+  const savePrompt = async () => {
+    if (!selectedPrompt) return
+    setSavingPrompt(true)
+    try {
+      const res = await fetch(`${API_URL}/api/prompts/${selectedPrompt.name}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: editedPromptContent })
+      })
+      const data = await res.json()
+      if (data.success) {
+        alert('Prompt saved!')
+        setSelectedPrompt({ ...selectedPrompt, ...data.prompt })
+        loadPrompts()
+      } else {
+        alert('Failed to save: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Failed to save prompt:', error)
+      alert('Failed to save prompt')
+    } finally {
+      setSavingPrompt(false)
+    }
+  }
+
+  const resetPrompt = async () => {
+    if (!selectedPrompt || !confirm('Reset to default?')) return
+    try {
+      const res = await fetch(`${API_URL}/api/prompts/${selectedPrompt.name}/reset`, {
+        method: 'POST'
+      })
+      const data = await res.json()
+      if (data.success) {
+        alert('Reset to default!')
+        setSelectedPrompt({ name: selectedPrompt.name, ...data.prompt })
+        setEditedPromptContent(data.prompt.content)
+        loadPrompts()
+      }
+    } catch (error) {
+      console.error('Failed to reset prompt:', error)
+    }
+  }
+
+  const closePromptEditor = () => {
+    setSelectedPrompt(null)
+    setEditedPromptContent('')
+  }
+
   return (
     <div className="app">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -276,9 +356,11 @@ function AdminPage({ onLogout }) {
         availableModels={AVAILABLE_MODELS}
         cacheEnabled={cacheEnabled}
         modelAwareCache={modelAwareCache}
+        prompts={prompts}
         onModelChange={changeModel}
         onToggleCache={toggleCache}
         onToggleModelAwareCache={toggleModelAwareCache}
+        onPromptSelect={openPromptEditor}
       />
 
       {loadingMetrics ? (
@@ -391,6 +473,64 @@ function AdminPage({ onLogout }) {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal for prompt editor */}
+      {selectedPrompt && (
+        <div className="modal-overlay" onClick={closePromptEditor}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px' }}>
+            <div className="modal-header">
+              <h2>Edit Prompt: {selectedPrompt.name.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</h2>
+              <button className="modal-close" onClick={closePromptEditor}>×</button>
+            </div>
+
+            <div className="modal-body">
+              <div style={{ marginBottom: '1rem', padding: '0.75rem', background: '#1a1a1a', border: '1px solid #444', borderRadius: '4px' }}>
+                <small>
+                  Status: <strong>{selectedPrompt.is_edited ? 'Custom' : 'Default'}</strong> |
+                  Source: <strong>{selectedPrompt.source}</strong>
+                </small>
+                <br />
+                <small style={{ color: '#888', marginTop: '0.5rem', display: 'block' }}>
+                  Use placeholders like {'{code}'}, {'{prompt}'}, {'{problem_number}'} in your template
+                </small>
+              </div>
+
+              <textarea
+                value={editedPromptContent}
+                onChange={(e) => setEditedPromptContent(e.target.value)}
+                rows={20}
+                style={{
+                  width: '100%',
+                  padding: '1rem',
+                  background: '#1a1a1a',
+                  border: '2px solid #444',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  fontFamily: 'monospace',
+                  fontSize: '0.9rem',
+                  lineHeight: '1.5',
+                  resize: 'vertical'
+                }}
+                spellCheck={false}
+              />
+
+              <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                {selectedPrompt.is_edited && (
+                  <button onClick={resetPrompt} style={{ background: '#ff9800' }}>
+                    Reset to Default
+                  </button>
+                )}
+                <button onClick={savePrompt} disabled={savingPrompt}>
+                  {savingPrompt ? 'Saving...' : 'Save'}
+                </button>
+                <button onClick={closePromptEditor} style={{ background: '#555' }}>
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

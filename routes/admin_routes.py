@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from observability import logger
 from cache import cache
+from prompts.loader import prompts
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -53,5 +54,45 @@ def set_current_model_route():
             return jsonify({'success': True, 'model': cache.get_current_model()})
         else:
             return jsonify({'success': False, 'error': 'No model specified'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@admin_bp.route('/api/prompts', methods=['GET'])
+def list_prompts():
+    """List all available prompts with their edit status"""
+    try:
+        all_prompts = prompts.list_all()
+        return jsonify({'success': True, 'prompts': all_prompts})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@admin_bp.route('/api/prompts/<prompt_name>', methods=['GET'])
+def get_prompt(prompt_name):
+    """Get a specific prompt (raw, unformatted)"""
+    try:
+        prompt_data = prompts.get_raw(prompt_name)
+        return jsonify({'success': True, 'prompt': prompt_data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@admin_bp.route('/api/prompts/<prompt_name>', methods=['POST'])
+def update_prompt(prompt_name):
+    """Update/edit a prompt"""
+    try:
+        content = request.json.get('content')
+        if content is None:
+            return jsonify({'success': False, 'error': 'No content provided'})
+
+        prompts.set(prompt_name, content)
+        return jsonify({'success': True, 'message': 'Prompt updated successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@admin_bp.route('/api/prompts/<prompt_name>', methods=['DELETE'])
+def reset_prompt(prompt_name):
+    """Reset a prompt to default"""
+    try:
+        default_content = prompts.reset(prompt_name)
+        return jsonify({'success': True, 'message': 'Prompt reset to default', 'content': default_content})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})

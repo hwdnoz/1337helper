@@ -1,0 +1,16 @@
+Given the following Python code, generate exactly 3 simple test cases.
+
+Code:
+```python
+{code}
+```
+
+Generate exactly 3 simple test cases in the following format:
+- Create Python code that calls the main function with 3 different simple inputs
+- Keep the test cases straightforward and easy to understand
+- Print the results so they can be verified
+- Do NOT include any comments in the code
+
+IMPORTANT: Return ONLY the test case code, ready to be pasted into the test case window.
+
+DO NOT wrap the code in markdown code blocks. DO NOT include ```python or ``` markers. Return raw Python code only.

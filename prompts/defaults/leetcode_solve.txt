@@ -1,0 +1,10 @@
+Fetch the LeetCode problem #{problem_number} and provide a complete Python solution.
+
+Please structure your response as follows:
+1. Problem title and description
+2. A complete, working Python solution
+3. Time and space complexity analysis
+
+IMPORTANT: Return ONLY the Python code for the solution, properly formatted and ready to run. Include the problem description as a docstring at the top of the solution function.
+
+DO NOT wrap the code in markdown code blocks. DO NOT include ```python or ``` markers. Return raw Python code only.
