@@ -4,8 +4,10 @@ import CodeMirror from '@uiw/react-codemirror'
 import { python } from '@codemirror/lang-python'
 import { vim } from '@replit/codemirror-vim'
 import './App.css'
-import { PROMPT_MODIFIERS } from './promptPresets'
 import { API_URL } from './config'
+import { useJobManager } from './hooks/useJobManager'
+import { usePromptLoader } from './hooks/usePromptLoader'
+import JobQueue from './components/JobQueue'
 
 function App() {
   const navigate = useNavigate()
@@ -16,23 +18,33 @@ function App() {
   const [llmPrompt, setLlmPrompt] = useState('')
   const [leetcodeNumber, setLeetcodeNumber] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarMode, setSidebarMode] = useState('solution-prompt') // 'solution-prompt', 'test-case', 'llm-prompt'
-  const [basePrompt, setBasePrompt] = useState('')
-  const [basePromptTemplate, setBasePromptTemplate] = useState('') // Raw template from backend
-  const [promptModifier, setPromptModifier] = useState('')
-  const [activePreset, setActivePreset] = useState('default')
-  const [loadingBasePrompt, setLoadingBasePrompt] = useState(false)
+  const [sidebarMode, setSidebarMode] = useState('solution-prompt')
   const [lastUpdate, setLastUpdate] = useState(null)
   const [cacheHit, setCacheHit] = useState(false)
   const [lastTestCaseUpdate, setLastTestCaseUpdate] = useState(null)
   const [testCaseCacheHit, setTestCaseCacheHit] = useState(false)
-  const [jobId, setJobId] = useState(null)
-  const [jobStatus, setJobStatus] = useState(null)
-  const [jobMessage, setJobMessage] = useState('')
-  const [jobs, setJobs] = useState([]) // Array of {id, status, message, problemNumber, timestamp}
   const outputRef = useRef(null)
-  const pollingIntervalRef = useRef(null)
-  const jobPollingIntervals = useRef({})
+
+  // Custom hooks for job management and prompt loading
+  const {
+    jobs,
+    currentJobId,
+    currentJobStatus,
+    currentJobMessage,
+    startJob,
+    clearCompletedJobs
+  } = useJobManager()
+
+  const {
+    basePrompt,
+    promptModifier,
+    activePreset,
+    loadingBasePrompt,
+    applyPreset,
+    resetPromptToDefault,
+    getFinalPrompt,
+    setPromptModifier
+  } = usePromptLoader(leetcodeNumber)
 
   useEffect(() => {
     fetch(`${API_URL}/api/code`)
@@ -40,87 +52,37 @@ function App() {
       .then(data => setCode(data.code || ''))
   }, [])
 
-  // Load base prompt template from admin defaults
-  useEffect(() => {
-    const loadBasePrompt = async () => {
-      setLoadingBasePrompt(true)
-      try {
-        const res = await fetch(`${API_URL}/api/prompts/leetcode_solve`)
-        const data = await res.json()
-        if (data.success) {
-          setBasePromptTemplate(data.prompt.content)
-        }
-      } catch (error) {
-        console.error('Failed to load base prompt:', error)
-      } finally {
-        setLoadingBasePrompt(false)
-      }
-    }
-    loadBasePrompt()
-  }, [])
-
-  // Update base prompt when template or leetcode number changes
-  useEffect(() => {
-    if (basePromptTemplate) {
-      const replaced = basePromptTemplate
-        .replace(/\{problem_number\}/g, leetcodeNumber || '{problem_number}')
-        .replace(/#\{problem_number\}/g, leetcodeNumber || '#{problem_number}')
-      setBasePrompt(replaced)
-    }
-  }, [basePromptTemplate, leetcodeNumber])
-
   useEffect(() => {
     if (outputRef.current) {
       outputRef.current.scrollTop = outputRef.current.scrollHeight
     }
   }, [output])
 
-  // Check for active jobs on mount and resume polling if needed
+  // Update UI when job completes successfully
   useEffect(() => {
-    const savedJobsStr = localStorage.getItem('activeJobs')
-
-    if (savedJobsStr) {
-      try {
-        const savedJobs = JSON.parse(savedJobsStr)
-        const now = Date.now()
-
-        // Filter jobs that are less than 10 minutes old
-        const validJobs = savedJobs.filter(job => {
-          const elapsed = now - job.timestamp
-          return elapsed < 600000 // 10 minutes
-        })
-
-        if (validJobs.length > 0) {
-          setJobs(validJobs)
-
-          // Start polling for each job
-          validJobs.forEach(job => {
-            jobPollingIntervals.current[job.id] = setInterval(() => {
-              pollJobStatus(job.id)
-            }, 2000)
-            // Poll immediately
-            pollJobStatus(job.id)
-          })
-
-          // Set the most recent job as the "current" job
-          const mostRecent = validJobs[validJobs.length - 1]
-          setJobId(mostRecent.id)
-          setJobStatus(mostRecent.status)
-          setJobMessage(mostRecent.message)
-        } else {
-          localStorage.removeItem('activeJobs')
+    if (currentJobStatus === 'SUCCESS') {
+      const currentJob = jobs.find(j => j.id === currentJobId)
+      if (currentJob && currentJob.result && currentJob.result.success) {
+        // Handle different result types based on what fields exist
+        if (currentJob.result.response) {
+          // LeetCode job - update code editor
+          setCode(currentJob.result.response)
+        } else if (currentJob.result.code) {
+          // Code modification job - update code editor
+          setCode(currentJob.result.code)
+        } else if (currentJob.result.test_cases) {
+          // Test case generation job - update test case window
+          setTestCase(currentJob.result.test_cases)
+          setLastTestCaseUpdate(new Date())
+          setTestCaseCacheHit(currentJob.result.from_cache || false)
+          return // Don't update lastUpdate for test cases
         }
-      } catch (error) {
-        console.error('Error loading jobs from localStorage:', error)
-        localStorage.removeItem('activeJobs')
+
+        setLastUpdate(new Date())
+        setCacheHit(currentJob.result.from_cache || false)
       }
     }
-
-    // Cleanup on unmount
-    return () => {
-      Object.values(jobPollingIntervals.current).forEach(interval => clearInterval(interval))
-    }
-  }, [])
+  }, [currentJobStatus, currentJobId, jobs])
 
   const runCode = async () => {
     const res = await fetch(`${API_URL}/api/run`, {
@@ -201,25 +163,7 @@ function App() {
       const data = await res.json()
 
       if (data.job_id) {
-        const newJob = {
-          id: data.job_id,
-          status: 'PENDING',
-          message: 'Code modification job submitted...',
-          problemNumber: 'LLM',
-          timestamp: Date.now()
-        }
-
-        setJobs(prevJobs => [...prevJobs, newJob])
-        setJobId(data.job_id)
-        setJobStatus('PENDING')
-        setJobMessage('Code modification job submitted...')
-
-        const updatedJobs = [...jobs, newJob]
-        localStorage.setItem('activeJobs', JSON.stringify(updatedJobs))
-
-        jobPollingIntervals.current[data.job_id] = setInterval(() => {
-          pollJobStatus(data.job_id)
-        }, 2000)
+        startJob(data.job_id, 'LLM')
       }
     } catch (error) {
       console.error('Fetch Error:', error)
@@ -245,139 +189,26 @@ function App() {
     }
   }
 
-  const pollJobStatus = async (currentJobId) => {
-    try {
-      const res = await fetch(`${API_URL}/api/jobs/${currentJobId}`)
-      const data = await res.json()
-
-      // Determine if job is terminal (completed or failed)
-      const isTerminal = data.state === 'SUCCESS' || data.state === 'FAILURE'
-
-      if (isTerminal) {
-        // Stop polling this specific job
-        if (jobPollingIntervals.current[currentJobId]) {
-          clearInterval(jobPollingIntervals.current[currentJobId])
-          delete jobPollingIntervals.current[currentJobId]
-        }
-      }
-
-      // Update jobs array with new status
-      setJobs(prevJobs =>
-        prevJobs.map(job =>
-          job.id === currentJobId
-            ? {
-                ...job,
-                status: data.state,
-                message: data.state === 'SUCCESS' ? 'Completed' :
-                         data.state === 'FAILURE' ? `Failed: ${data.error || 'Unknown error'}` :
-                         data.status,
-                completed: isTerminal
-              }
-            : job
-        )
-      )
-
-      // Update main status display if this is the current job
-      if (currentJobId === jobId) {
-        setJobStatus(data.state)
-        setJobMessage(data.state === 'SUCCESS' ? 'Job completed successfully!' :
-                      data.state === 'FAILURE' ? `Job failed: ${data.error}` :
-                      data.status)
-      }
-
-      // Update appropriate UI elements when ANY job completes successfully
-      if (data.state === 'SUCCESS' && data.result && data.result.success) {
-        // Handle different result types based on what fields exist
-        if (data.result.response) {
-          // LeetCode job - update code editor
-          setCode(data.result.response)
-        } else if (data.result.code) {
-          // Code modification job - update code editor
-          setCode(data.result.code)
-        } else if (data.result.test_cases) {
-          // Test case generation job - update test case window
-          setTestCase(data.result.test_cases)
-        }
-
-        setLastUpdate(new Date())
-        setCacheHit(data.result.from_cache || false)
-        // Update jobId to track the most recently completed job
-        setJobId(currentJobId)
-      }
-
-      // Update localStorage if terminal state
-      if (isTerminal) {
-        updateJobsInLocalStorage()
-      }
-    } catch (error) {
-      console.error('Polling Error:', error)
-    }
-  }
-
-  const updateJobsInLocalStorage = () => {
-    setJobs(prevJobs => {
-      const activeJobs = prevJobs.filter(job => job.status !== 'SUCCESS' && job.status !== 'FAILURE')
-      localStorage.setItem('activeJobs', JSON.stringify(activeJobs))
-      return prevJobs
-    })
-  }
-
   const solveLeetcode = async () => {
     setSidebarOpen(false)
     try {
-      // Combine base prompt + modifier (placeholders already replaced in basePrompt)
-      const customPrompt = basePrompt + promptModifier
-
-      // Always use async job endpoint
       const res = await fetch(`${API_URL}/api/jobs/leetcode`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           problem_number: leetcodeNumber,
-          custom_prompt: customPrompt
+          custom_prompt: getFinalPrompt()
         })
       })
       const data = await res.json()
 
       if (data.job_id) {
-        const newJob = {
-          id: data.job_id,
-          status: 'PENDING',
-          message: 'Job submitted, waiting for processing...',
-          problemNumber: leetcodeNumber,
-          timestamp: Date.now()
-        }
-
-        // Add to jobs array
-        setJobs(prevJobs => [...prevJobs, newJob])
-        setJobId(data.job_id)
-        setJobStatus('PENDING')
-        setJobMessage('Job submitted, waiting for processing...')
-
-        // Save to localStorage
-        const updatedJobs = [...jobs, newJob]
-        localStorage.setItem('activeJobs', JSON.stringify(updatedJobs))
-
-        // Start polling for this specific job
-        jobPollingIntervals.current[data.job_id] = setInterval(() => {
-          pollJobStatus(data.job_id)
-        }, 2000)
+        startJob(data.job_id, leetcodeNumber)
       }
     } catch (error) {
       console.error('Fetch Error:', error)
       alert(`Failed to connect to server: ${error.message}`)
     }
-  }
-
-  const resetPromptToDefault = () => {
-    setPromptModifier('')
-    setActivePreset('default')
-  }
-
-  const applyPreset = (preset) => {
-    const modifier = PROMPT_MODIFIERS[preset] || ''
-    setPromptModifier(modifier)
-    setActivePreset(preset)
   }
 
   const getPresetButtonStyle = (preset) => {
@@ -402,25 +233,7 @@ function App() {
       const data = await res.json()
 
       if (data.job_id) {
-        const newJob = {
-          id: data.job_id,
-          status: 'PENDING',
-          message: 'Test case generation job submitted...',
-          problemNumber: 'Tests',
-          timestamp: Date.now()
-        }
-
-        setJobs(prevJobs => [...prevJobs, newJob])
-        setJobId(data.job_id)
-        setJobStatus('PENDING')
-        setJobMessage('Test case generation job submitted...')
-
-        const updatedJobs = [...jobs, newJob]
-        localStorage.setItem('activeJobs', JSON.stringify(updatedJobs))
-
-        jobPollingIntervals.current[data.job_id] = setInterval(() => {
-          pollJobStatus(data.job_id)
-        }, 2000)
+        startJob(data.job_id, 'Tests')
       }
     } catch (error) {
       console.error('Fetch Error:', error)
@@ -494,84 +307,11 @@ function App() {
       </div>
 
       {/* Job Status Display - All Jobs */}
-      {jobs.length > 0 && (
-        <div style={{
-          background: '#1e1e1e',
-          border: '2px solid #0e639c',
-          padding: '1rem',
-          marginBottom: '1rem',
-          borderRadius: '4px',
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '0.5rem'
-          }}>
-            <div style={{ fontWeight: 'bold', fontSize: '1rem', color: '#1177bb' }}>
-              Background Jobs ({jobs.filter(j => j.status !== 'SUCCESS' && j.status !== 'FAILURE').length} active)
-            </div>
-            <button
-              onClick={() => {
-                setJobs(prevJobs => prevJobs.filter(j => j.status !== 'SUCCESS' && j.status !== 'FAILURE'))
-                updateJobsInLocalStorage()
-              }}
-              style={{
-                padding: '0.25rem 0.5rem',
-                fontSize: '0.8rem',
-                background: '#555',
-                border: '1px solid #777'
-              }}
-            >
-              Clear Completed
-            </button>
-          </div>
-
-          <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-            {jobs.map((job, index) => (
-              <div key={job.id} style={{
-                background: '#2d2d2d',
-                padding: '0.75rem',
-                marginBottom: '0.5rem',
-                borderRadius: '4px',
-                border: job.id === jobId ? '1px solid #1177bb' : '1px solid #3e3e42'
-              }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '0.5rem', fontSize: '0.85rem', alignItems: 'center' }}>
-                  <div style={{ color: '#888' }}>Problem #{job.problemNumber}:</div>
-                  <div style={{ fontFamily: 'monospace', color: '#4caf50', fontSize: '0.75rem' }}>
-                    {job.id.substring(0, 8)}...
-                  </div>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <span style={{
-                      padding: '0.25rem 0.5rem',
-                      borderRadius: '2px',
-                      background: job.status === 'SUCCESS' ? '#4caf50' :
-                                 job.status === 'FAILURE' ? '#f44336' :
-                                 job.status === 'STARTED' ? '#ff9800' :
-                                 '#888',
-                      color: 'white',
-                      fontWeight: 'bold',
-                      fontSize: '0.7rem'
-                    }}>
-                      {job.status}
-                    </span>
-                    {(job.status === 'PENDING' || job.status === 'STARTED') && (
-                      <div className="spinner" style={{ width: '12px', height: '12px', borderWidth: '2px' }}></div>
-                    )}
-                  </div>
-                </div>
-                <div style={{ fontSize: '0.8rem', color: '#aaa', marginTop: '0.25rem' }}>
-                  {job.message}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <JobQueue
+        jobs={jobs}
+        currentJobId={currentJobId}
+        onClearCompleted={clearCompletedJobs}
+      />
       <div className="container">
         <div style={{ flex: '2', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
