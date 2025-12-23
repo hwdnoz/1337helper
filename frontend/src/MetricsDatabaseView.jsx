@@ -132,6 +132,9 @@ function MetricsDatabaseView({ onLogout }) {
             </select>
           </label>
           <button onClick={loadData}>Refresh</button>
+          <button onClick={() => navigate('/admin/cache-database')} style={{ background: '#1976d2' }}>
+            Cache Database
+          </button>
           <button onClick={() => navigate('/admin')} style={{ background: '#555' }}>
             Back to Admin
           </button>

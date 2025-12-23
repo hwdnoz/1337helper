@@ -115,6 +115,9 @@ function CacheDatabaseView({ onLogout }) {
             </select>
           </label>
           <button onClick={loadData}>Refresh</button>
+          <button onClick={() => navigate('/admin/metrics-database')} style={{ background: '#ff9800' }}>
+            Metrics Database
+          </button>
           <button onClick={() => navigate('/admin')} style={{ background: '#555' }}>
             Back to Admin
           </button>
