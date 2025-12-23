@@ -19,10 +19,11 @@ help:
 	@echo "  make docker-logs-backend  - Follow backend logs"
 	@echo "  make docker-logs-frontend - Follow frontend logs"
 	@echo ""
-	@echo "Docker Compose:"
-	@echo "  make compose-up                   - Start services (default: BACKEND_SCALE=1)"
-	@echo "  make compose-up BACKEND_SCALE=3   - Start with 3 backend instances + nginx"
-	@echo "  make compose-down                 - Stop and remove containers"
+	@echo "Docker Compose (Recommended):"
+	@echo "  make compose-up                   - Start all services (RabbitMQ, Redis, Backend, Celery, Frontend, Proxy)"
+	@echo "  make compose-up BACKEND_SCALE=5   - Start with 5 backend instances + nginx load balancer"
+	@echo "  make compose-down                 - Stop and remove all containers"
+	@echo "  make compose-reload               - Full rebuild: down, prune, up with 5 backends"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make docker-remove-containers - Remove Docker containers"
@@ -72,10 +73,15 @@ docker-remove-images:
 	@docker rmi -f 1337helper-frontend 2>/dev/null || true
 
 compose-up:
-	@docker-compose up --scale backend=$(BACKEND_SCALE)
+	@docker compose up --scale backend=$(BACKEND_SCALE)
 
 compose-down:
-	@docker-compose down
+	@docker compose down
+
+compose-reload:
+	@docker compose down
+	@docker system prune -af
+	@docker compose up --scale backend=5
 
 # use below with care; uncoment to use;
 # will stop and remove all containers, images, and volumes including those unrelated to this application
