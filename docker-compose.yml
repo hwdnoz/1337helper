@@ -1,6 +1,6 @@
 services:
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    image: rabbitmq:3.13.0-management-alpine
     ports:
       - "5672:5672"    # AMQP
       - "15672:15672"  # Management UI
@@ -11,14 +11,14 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.2.4-alpine
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
 
   proxy:
-    image: nginx:alpine
+    image: nginx:1.25.4-alpine
     ports:
       - "5102:80"
     volumes:
