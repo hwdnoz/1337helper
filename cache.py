@@ -2,6 +2,7 @@ import sqlite3
 import hashlib
 import json
 import time
+import os
 from datetime import datetime, timedelta
 
 class PromptCache:
@@ -185,7 +186,8 @@ class PromptCache:
     def set_enabled(self, enabled):
         """Store cache enabled state in Redis (shared across all containers)"""
         import redis
-        r = redis.Redis(host='redis', port=6379, db=1, decode_responses=True)
+        redis_password = os.environ.get('REDIS_PASSWORD', '')
+        r = redis.Redis(host='redis', port=6379, db=1, password=redis_password, decode_responses=True)
         r.set('cache_enabled', '1' if enabled else '0')
         return enabled
 
@@ -193,7 +195,8 @@ class PromptCache:
         """Read cache enabled state from Redis (shared across all containers)"""
         try:
             import redis
-            r = redis.Redis(host='redis', port=6379, db=1, decode_responses=True)
+            redis_password = os.environ.get('REDIS_PASSWORD', '')
+            r = redis.Redis(host='redis', port=6379, db=1, password=redis_password, decode_responses=True)
             value = r.get('cache_enabled')
             return value == '1' if value is not None else True  # Default True
         except:
@@ -203,7 +206,8 @@ class PromptCache:
     def set_model_aware_cache(self, model_aware):
         """Store model-aware cache state in Redis (shared across all containers)"""
         import redis
-        r = redis.Redis(host='redis', port=6379, db=1, decode_responses=True)
+        redis_password = os.environ.get('REDIS_PASSWORD', '')
+        r = redis.Redis(host='redis', port=6379, db=1, password=redis_password, decode_responses=True)
         r.set('model_aware_cache', '1' if model_aware else '0')
         return model_aware
 
@@ -211,7 +215,8 @@ class PromptCache:
         """Read model-aware cache state from Redis (shared across all containers)"""
         try:
             import redis
-            r = redis.Redis(host='redis', port=6379, db=1, decode_responses=True)
+            redis_password = os.environ.get('REDIS_PASSWORD', '')
+            r = redis.Redis(host='redis', port=6379, db=1, password=redis_password, decode_responses=True)
             value = r.get('model_aware_cache')
             return value == '1' if value is not None else True  # Default True
         except:
@@ -221,7 +226,8 @@ class PromptCache:
     def set_current_model(self, model):
         """Store current model in Redis (shared across all containers)"""
         import redis
-        r = redis.Redis(host='redis', port=6379, db=1, decode_responses=True)
+        redis_password = os.environ.get('REDIS_PASSWORD', '')
+        r = redis.Redis(host='redis', port=6379, db=1, password=redis_password, decode_responses=True)
         r.set('current_model', model)
         return model
 
@@ -229,7 +235,8 @@ class PromptCache:
         """Read current model from Redis (shared across all containers)"""
         try:
             import redis
-            r = redis.Redis(host='redis', port=6379, db=1, decode_responses=True)
+            redis_password = os.environ.get('REDIS_PASSWORD', '')
+            r = redis.Redis(host='redis', port=6379, db=1, password=redis_password, decode_responses=True)
             model = r.get('current_model')
             return model if model else 'gemini-2.5-flash'  # Default model
         except:
