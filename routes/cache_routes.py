@@ -75,3 +75,21 @@ def set_cache_model_aware():
         return jsonify({'success': True, 'model_aware': cache.is_model_aware_cache()})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+@cache_bp.route('/api/cache/semantic-enabled', methods=['GET'])
+def get_semantic_cache_enabled():
+    """Get semantic cache enabled status"""
+    try:
+        return jsonify({'success': True, 'semantic_enabled': cache.is_semantic_cache_enabled()})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@cache_bp.route('/api/cache/semantic-enabled', methods=['POST'])
+def set_semantic_cache_enabled():
+    """Set semantic cache enabled status"""
+    try:
+        semantic_enabled = request.json.get('semantic_enabled', False)
+        cache.set_semantic_cache_enabled(semantic_enabled)
+        return jsonify({'success': True, 'semantic_enabled': cache.is_semantic_cache_enabled()})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})

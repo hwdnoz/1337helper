@@ -4,6 +4,9 @@ import json
 import time
 import os
 from datetime import datetime, timedelta
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 class PromptCache:
     def __init__(self, db_path='data/llm_cache.db', ttl_hours=24):
@@ -54,13 +57,14 @@ class PromptCache:
             content = f"{operation_type}:{prompt}"
         return hashlib.sha256(content.encode()).hexdigest()
 
-    def get(self, prompt, operation_type, model=None, use_cache=None, model_aware_cache=None):
+    def get(self, prompt, operation_type, model=None, use_cache=None, model_aware_cache=None, metadata=None):
         # Use provided use_cache setting, or fall back to Redis setting
         should_use_cache = use_cache if use_cache is not None else self.is_enabled()
 
         if not should_use_cache:
             return None
 
+        # Try exact hash match first
         prompt_hash = self._hash_prompt(prompt, operation_type, model, model_aware_cache)
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
@@ -91,7 +95,13 @@ class PromptCache:
             return result
 
         conn.close()
-        return None
+
+        # If no exact match, try semantic search (if enabled)
+        semantic_result = self._find_similar_prompt(prompt, operation_type, model, model_aware_cache, metadata)
+        if semantic_result:
+            if semantic_result.get('metadata'):
+                semantic_result['metadata'] = json.loads(semantic_result['metadata']) if isinstance(semantic_result['metadata'], str) else semantic_result['metadata']
+        return semantic_result
 
     def set(self, prompt, operation_type, response_text, metadata=None, model=None, use_cache=None, model_aware_cache=None):
         # Use provided use_cache setting, or fall back to Redis setting
@@ -180,7 +190,8 @@ class PromptCache:
             'operation_breakdown': operation_breakdown,
             'ttl_hours': self.ttl_hours,
             'enabled': self.is_enabled(),
-            'model_aware_cache': self.is_model_aware_cache()
+            'model_aware_cache': self.is_model_aware_cache(),
+            'semantic_cache_enabled': self.is_semantic_cache_enabled()
         }
 
     def set_enabled(self, enabled):
@@ -242,6 +253,138 @@ class PromptCache:
         except:
             # Fallback if Redis unavailable
             return 'gemini-2.5-flash'
+
+    def set_semantic_cache_enabled(self, enabled):
+        """Store semantic cache enabled state in Redis (shared across all containers)"""
+        import redis
+        redis_password = os.environ.get('REDIS_PASSWORD', '')
+        r = redis.Redis(host='redis', port=6379, db=1, password=redis_password, decode_responses=True)
+        r.set('semantic_cache_enabled', '1' if enabled else '0')
+        return enabled
+
+    def is_semantic_cache_enabled(self):
+        """Read semantic cache enabled state from Redis (shared across all containers)"""
+        try:
+            import redis
+            redis_password = os.environ.get('REDIS_PASSWORD', '')
+            r = redis.Redis(host='redis', port=6379, db=1, password=redis_password, decode_responses=True)
+            value = r.get('semantic_cache_enabled')
+            return value == '1' if value is not None else False  # Default False
+        except:
+            # Fallback if Redis unavailable
+            return False
+
+    def get_semantic_similarity_threshold(self):
+        """Get semantic similarity threshold from Redis (default 0.95)"""
+        try:
+            import redis
+            redis_password = os.environ.get('REDIS_PASSWORD', '')
+            r = redis.Redis(host='redis', port=6379, db=1, password=redis_password, decode_responses=True)
+            value = r.get('semantic_similarity_threshold')
+            return float(value) if value else 0.95
+        except:
+            return 0.95
+
+    def _find_similar_prompt(self, prompt, operation_type, model=None, model_aware_cache=None, metadata=None):
+        """Find similar cached prompt using semantic search (TF-IDF + cosine similarity)
+
+        Only compares against cached entries with matching metadata fields.
+        This ensures semantic cache only matches similar prompts for the SAME problem/context.
+        """
+        if not self.is_semantic_cache_enabled():
+            return None
+
+        use_model_aware = model_aware_cache if model_aware_cache is not None else self.is_model_aware_cache()
+        threshold = self.get_semantic_similarity_threshold()
+
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        expiry_time = datetime.utcnow() - timedelta(hours=self.ttl_hours)
+
+        # Get all non-expired prompts for this operation type (and model if model-aware)
+        if use_model_aware and model:
+            cursor.execute('''
+                SELECT * FROM prompt_cache
+                WHERE operation_type = ? AND model = ? AND created_at > ?
+            ''', (operation_type, model, expiry_time.isoformat()))
+        else:
+            cursor.execute('''
+                SELECT * FROM prompt_cache
+                WHERE operation_type = ? AND created_at > ?
+            ''', (operation_type, expiry_time.isoformat()))
+
+        rows = cursor.fetchall()
+        conn.close()
+
+        if not rows:
+            return None
+
+        # Extract prompts and filter by metadata if provided
+        cached_prompts = [dict(row) for row in rows]
+
+        # Filter by metadata: only keep entries with matching metadata fields
+        if metadata:
+            filtered_prompts = []
+            for cp in cached_prompts:
+                if cp['metadata']:
+                    try:
+                        cached_metadata = json.loads(cp['metadata']) if isinstance(cp['metadata'], str) else cp['metadata']
+                        # Check if all provided metadata fields match
+                        metadata_match = all(
+                            cached_metadata.get(key) == value
+                            for key, value in metadata.items()
+                        )
+                        if metadata_match:
+                            filtered_prompts.append(cp)
+                    except:
+                        # Skip entries with invalid metadata
+                        continue
+            cached_prompts = filtered_prompts
+
+        if not cached_prompts:
+            return None
+
+        # Extract prompts for comparison
+        prompt_texts = [cp['prompt'] for cp in cached_prompts]
+        prompt_texts.append(prompt)  # Add current prompt
+
+        # Calculate TF-IDF vectors
+        try:
+            vectorizer = TfidfVectorizer(lowercase=True, stop_words='english')
+            tfidf_matrix = vectorizer.fit_transform(prompt_texts)
+
+            # Calculate cosine similarity between current prompt and all cached prompts
+            similarities = cosine_similarity(tfidf_matrix[-1:], tfidf_matrix[:-1])[0]
+
+            # Find best match above threshold
+            max_idx = np.argmax(similarities)
+            max_similarity = similarities[max_idx]
+
+            if max_similarity >= threshold:
+                best_match = cached_prompts[max_idx]
+                best_match['similarity_score'] = float(max_similarity)
+                best_match['semantic_cache_hit'] = True
+                best_match['current_prompt'] = prompt  # Include current prompt for diff comparison
+
+                # Update access stats for the matched entry
+                conn = sqlite3.connect(self.db_path)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE prompt_cache
+                    SET accessed_at = ?, access_count = access_count + 1
+                    WHERE prompt_hash = ?
+                ''', (datetime.utcnow().isoformat(), best_match['prompt_hash']))
+                conn.commit()
+                conn.close()
+
+                return best_match
+        except Exception as e:
+            print(f"Semantic search error: {e}")
+            return None
+
+        return None
 
     def get_all_entries(self, limit=100):
         conn = sqlite3.connect(self.db_path)

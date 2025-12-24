@@ -5,10 +5,12 @@ function AdminControls({
   availableModels,
   cacheEnabled,
   modelAwareCache,
+  semanticCacheEnabled,
   prompts,
   onModelChange,
   onToggleCache,
   onToggleModelAwareCache,
+  onToggleSemanticCache,
   onPromptSelect
 }) {
   const [showPromptDropdown, setShowPromptDropdown] = useState(false)
@@ -81,6 +83,23 @@ function AdminControls({
         title={modelAwareCache ? 'Each model has separate cache' : 'All models share the same cache'}
       >
         Model-Aware: {modelAwareCache ? 'ON' : 'OFF'}
+      </button>
+
+      <button
+        onClick={onToggleSemanticCache}
+        style={{
+          background: semanticCacheEnabled ? '#9c27b0' : '#616161',
+          color: '#fff',
+          border: 'none',
+          padding: '0.5rem 1rem',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontSize: '0.85rem',
+          fontWeight: '500'
+        }}
+        title={semanticCacheEnabled ? 'Use semantic search to find similar cached prompts' : 'Only exact matches will use cache'}
+      >
+        Semantic Cache: {semanticCacheEnabled ? 'ON' : 'OFF'}
       </button>
 
       <div style={{ position: 'relative' }}>

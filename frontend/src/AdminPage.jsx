@@ -26,6 +26,7 @@ function AdminPage({ onLogout }) {
   // Settings state
   const [cacheEnabled, setCacheEnabled] = useState(true)
   const [modelAwareCache, setModelAwareCache] = useState(true)
+  const [semanticCacheEnabled, setSemanticCacheEnabled] = useState(false)
   const [currentModel, setCurrentModel] = useState('gemini-2.5-flash')
 
   // UI state
@@ -44,6 +45,7 @@ function AdminPage({ onLogout }) {
     loadCacheStats()
     loadCacheEnabled()
     loadModelAwareCache()
+    loadSemanticCacheEnabled()
     loadCurrentModel()
     loadPrompts()
   }, [])
@@ -203,6 +205,38 @@ function AdminPage({ onLogout }) {
     }
   }
 
+  const loadSemanticCacheEnabled = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/cache/semantic-enabled`)
+      const data = await res.json()
+
+      if (data.success) {
+        setSemanticCacheEnabled(data.semantic_enabled)
+      }
+    } catch (error) {
+      console.error('Failed to load semantic cache enabled status:', error)
+    }
+  }
+
+  const toggleSemanticCache = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/cache/semantic-enabled`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ semantic_enabled: !semanticCacheEnabled })
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        setSemanticCacheEnabled(data.semantic_enabled)
+        loadCacheStats()
+      }
+    } catch (error) {
+      console.error('Failed to toggle semantic cache:', error)
+      alert('Failed to toggle semantic cache')
+    }
+  }
+
   const loadCurrentModel = async () => {
     try {
       const res = await fetch(`${API_URL}/api/current-model`)
@@ -356,10 +390,12 @@ function AdminPage({ onLogout }) {
         availableModels={AVAILABLE_MODELS}
         cacheEnabled={cacheEnabled}
         modelAwareCache={modelAwareCache}
+        semanticCacheEnabled={semanticCacheEnabled}
         prompts={prompts}
         onModelChange={changeModel}
         onToggleCache={toggleCache}
         onToggleModelAwareCache={toggleModelAwareCache}
+        onToggleSemanticCache={toggleSemanticCache}
         onPromptSelect={openPromptEditor}
       />
 

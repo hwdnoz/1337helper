@@ -39,6 +39,10 @@ DO NOT wrap the code in markdown code blocks. DO NOT include ```python or ``` ma
                 'success': True,
                 'test_cases': cached_response['response_text'],
                 'from_cache': True,
+                'semantic_cache_hit': cached_response.get('semantic_cache_hit', False),
+                'similarity_score': cached_response.get('similarity_score'),
+                'cached_prompt': cached_response.get('prompt'),
+                'current_prompt': cached_response.get('current_prompt'),
                 'metadata': cached_response.get('metadata', {})
             }
 
@@ -134,6 +138,10 @@ DO NOT wrap the code in markdown code blocks. DO NOT include ```python or ``` ma
                 'success': True,
                 'code': cached_response['response_text'],
                 'from_cache': True,
+                'semantic_cache_hit': cached_response.get('semantic_cache_hit', False),
+                'similarity_score': cached_response.get('similarity_score'),
+                'cached_prompt': cached_response.get('prompt'),
+                'current_prompt': cached_response.get('current_prompt'),
                 'metadata': cached_response.get('metadata', {})
             }
 
@@ -222,14 +230,25 @@ IMPORTANT: Return ONLY the Python code for the solution, properly formatted and 
 
 DO NOT wrap the code in markdown code blocks. DO NOT include ```python or ``` markers. Return raw Python code only."""
 
-        # Check cache
-        cached_response = cache.get(fetch_prompt, 'leetcode_solve', current_model, use_cache, model_aware_cache)
+        # Check cache (with metadata to ensure same problem number)
+        cached_response = cache.get(
+            fetch_prompt,
+            'leetcode_solve',
+            current_model,
+            use_cache,
+            model_aware_cache,
+            metadata={'problem_number': problem_number}
+        )
 
         if cached_response:
             return {
                 'success': True,
                 'response': cached_response['response_text'],
                 'from_cache': True,
+                'semantic_cache_hit': cached_response.get('semantic_cache_hit', False),
+                'similarity_score': cached_response.get('similarity_score'),
+                'cached_prompt': cached_response.get('prompt'),
+                'current_prompt': cached_response.get('current_prompt'),
                 'metadata': cached_response.get('metadata', {})
             }
 
