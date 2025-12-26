@@ -5,9 +5,13 @@ from celery_app import celery_app
 from google import genai
 from observability import logger
 from cache import cache
+from prompts.loader import PromptLoader
 
 # Configure Google AI
 client = genai.Client(api_key=os.getenv('GOOGLE_API_KEY'))
+
+# Initialize prompt loader
+prompts = PromptLoader()
 
 
 def _strip_markdown_code_blocks(text: str) -> str:
@@ -161,22 +165,7 @@ def process_test_case_task(self, code, current_model, use_cache=True, model_awar
     """
     Background task to generate test cases for code
     """
-    prompt = f"""Given the following Python code, generate exactly 3 simple test cases.
-
-Code:
-```python
-{code}
-```
-
-Generate exactly 3 simple test cases in the following format:
-- Create Python code that calls the main function with 3 different simple inputs
-- Keep the test cases straightforward and easy to understand
-- Print the results so they can be verified
-- Do NOT include any comments in the code
-
-IMPORTANT: Return ONLY the test case code, ready to be pasted into the test case window.
-
-DO NOT wrap the code in markdown code blocks. DO NOT include ```python or ``` markers. Return raw Python code only."""
+    prompt = prompts.get('test_case_generation', code=code)
 
     return _execute_llm_task(
         prompt=prompt,
@@ -193,19 +182,7 @@ def process_code_modification_task(self, prompt, code, current_model, use_cache=
     """
     Background task to modify code based on user prompt
     """
-    full_prompt = f"""You are a code modification assistant. Given the following Python code and a user instruction, modify the code according to the instruction.
-
-Current code:
-```python
-{code}
-```
-
-User instruction: {prompt}
-
-IMPORTANT: Return ONLY the modified Python code, ready to run.
-
-DO NOT include any explanations, comments, or text before or after the code.
-DO NOT wrap the code in markdown code blocks. DO NOT include ```python or ``` markers. Return raw Python code only."""
+    full_prompt = prompts.get('code_modification', code=code, prompt=prompt)
 
     return _execute_llm_task(
         prompt=full_prompt,
@@ -222,20 +199,11 @@ def process_leetcode_task(self, problem_number, custom_prompt, current_model, us
     """
     Background task to process LeetCode problem
     """
-    # Build prompt - use custom or default
+    # Use custom prompt if provided, otherwise load from file
     if custom_prompt:
         prompt = custom_prompt
     else:
-        prompt = f"""Fetch the LeetCode problem #{problem_number} and provide a complete Python solution.
-
-Please structure your response as follows:
-1. Problem title and description
-2. A complete, working Python solution
-3. Time and space complexity analysis
-
-IMPORTANT: Return ONLY the Python code for the solution, properly formatted and ready to run. Include the problem description as a docstring at the top of the solution function.
-
-DO NOT wrap the code in markdown code blocks. DO NOT include ```python or ``` markers. Return raw Python code only."""
+        prompt = prompts.get('leetcode_solve', problem_number=problem_number)
 
     return _execute_llm_task(
         prompt=prompt,
