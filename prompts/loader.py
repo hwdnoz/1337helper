@@ -6,6 +6,12 @@ class PromptLoader:
         self.defaults_dir = defaults_dir
         self._file_cache = {}
 
+    def _get_redis_client(self):
+        """Get Redis client with password authentication"""
+        password = os.environ.get('REDIS_PASSWORD', '')
+        return redis.Redis(host='redis', port=6379, db=1,
+                          password=password, decode_responses=True)
+
     def _load_default(self, prompt_name):
         """Load default prompt from file, with caching"""
         if prompt_name not in self._file_cache:
@@ -21,7 +27,7 @@ class PromptLoader:
         """
         try:
             # Check Redis for edited version
-            r = redis.Redis(host='redis', port=6379, db=1, decode_responses=True)
+            r = self._get_redis_client()
             edited = r.get(f'prompt:{prompt_name}')
 
             if edited:
@@ -38,7 +44,7 @@ class PromptLoader:
         """Get raw prompt without formatting (for admin UI)"""
         try:
             # Check Redis for edited version
-            r = redis.Redis(host='redis', port=6379, db=1, decode_responses=True)
+            r = self._get_redis_client()
             edited = r.get(f'prompt:{prompt_name}')
 
             if edited:
@@ -52,13 +58,13 @@ class PromptLoader:
 
     def set(self, prompt_name, content):
         """Save edited prompt to Redis"""
-        r = redis.Redis(host='redis', port=6379, db=1, decode_responses=True)
+        r = self._get_redis_client()
         r.set(f'prompt:{prompt_name}', content)
         return content
 
     def reset(self, prompt_name):
         """Reset prompt to default by deleting from Redis"""
-        r = redis.Redis(host='redis', port=6379, db=1, decode_responses=True)
+        r = self._get_redis_client()
         r.delete(f'prompt:{prompt_name}')
         return self._load_default(prompt_name)
 
