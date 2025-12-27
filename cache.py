@@ -3,10 +3,13 @@ import hashlib
 import json
 import time
 import os
+import logging
 from datetime import datetime, timedelta
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 class PromptCache:
     def __init__(self, db_path='data/llm_cache.db', ttl_hours=24):
@@ -381,7 +384,7 @@ class PromptCache:
 
                 return best_match
         except Exception as e:
-            print(f"Semantic search error: {e}")
+            logger.warning(f"Semantic search error: {e}")
             return None
 
         return None
