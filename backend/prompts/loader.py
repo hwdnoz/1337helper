@@ -2,7 +2,11 @@ import os
 import redis
 
 class PromptLoader:
-    def __init__(self, defaults_dir='prompts/defaults'):
+    def __init__(self, defaults_dir=None):
+        if defaults_dir is None:
+            # Get directory relative to this file
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            defaults_dir = os.path.join(current_dir, 'defaults')
         self.defaults_dir = defaults_dir
         self._file_cache = {}
 

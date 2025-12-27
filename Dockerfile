@@ -18,4 +18,4 @@ COPY . .
 EXPOSE 3102
 
 # run python backend app
-CMD ["python", "app.py"]
+CMD ["python", "backend/app.py"]
