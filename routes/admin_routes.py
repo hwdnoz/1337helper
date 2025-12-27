@@ -1,6 +1,5 @@
 from flask import Blueprint, request, jsonify
-from observability import logger
-from services import cache
+from services import logger, cache
 from prompts.loader import prompts
 from utils import handle_errors
 
