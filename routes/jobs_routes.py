@@ -7,7 +7,7 @@ jobs_bp = Blueprint('jobs', __name__)
 @jobs_bp.route('/api/jobs/leetcode', methods=['POST'])
 def submit_leetcode_job():
     """Submit a LeetCode problem for async processing"""
-    from cache import cache
+    from services import cache
 
     problem_number = request.json.get('problem_number', '')
     custom_prompt = request.json.get('custom_prompt', None)
@@ -30,7 +30,7 @@ def submit_leetcode_job():
 @jobs_bp.route('/api/jobs/test-cases', methods=['POST'])
 def submit_test_case_job():
     """Submit test case generation for async processing"""
-    from cache import cache
+    from services import cache
 
     code = request.json.get('code', '')
 
@@ -51,7 +51,7 @@ def submit_test_case_job():
 @jobs_bp.route('/api/jobs/code-modification', methods=['POST'])
 def submit_code_modification_job():
     """Submit code modification for async processing"""
-    from cache import cache
+    from services import cache
 
     prompt = request.json.get('prompt', '')
     code = request.json.get('code', '')

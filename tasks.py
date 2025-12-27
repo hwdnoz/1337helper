@@ -4,7 +4,7 @@ from typing import Optional, Callable, Dict, Any
 from celery_app import celery_app
 from google import genai
 from observability import logger
-from cache import cache
+from services import cache
 from prompts.loader import PromptLoader
 
 # Configure Google AI

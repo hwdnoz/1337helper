@@ -1,5 +1,5 @@
 from flask import Blueprint, request
-from cache import cache
+from services import cache
 from utils import handle_errors
 
 cache_bp = Blueprint('cache', __name__)
