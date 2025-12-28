@@ -71,37 +71,25 @@ def get_job_status(job_id):
     """Check status of a background job"""
     task = AsyncResult(job_id)
 
-    if task.state == 'PENDING':
-        response = {
-            'job_id': job_id,
-            'state': task.state,
-            'status': 'Job is waiting to be processed'
-        }
-    elif task.state == 'STARTED':
-        response = {
-            'job_id': job_id,
-            'state': task.state,
-            'status': 'Job is being processed'
-        }
-    elif task.state == 'SUCCESS':
-        response = {
-            'job_id': job_id,
-            'state': task.state,
-            'status': 'Job completed successfully',
-            'result': task.result
-        }
+    # State mapping with status messages
+    state_mapping = {
+        'PENDING': 'Job is waiting to be processed',
+        'STARTED': 'Job is being processed',
+        'SUCCESS': 'Job completed successfully',
+        'FAILURE': 'Job failed'
+    }
+
+    # Build base response
+    response = {
+        'job_id': job_id,
+        'state': task.state,
+        'status': state_mapping.get(task.state, f'Job state: {task.state}')
+    }
+
+    # Add state-specific fields
+    if task.state == 'SUCCESS':
+        response['result'] = task.result
     elif task.state == 'FAILURE':
-        response = {
-            'job_id': job_id,
-            'state': task.state,
-            'status': 'Job failed',
-            'error': str(task.info)
-        }
-    else:
-        response = {
-            'job_id': job_id,
-            'state': task.state,
-            'status': f'Job state: {task.state}'
-        }
+        response['error'] = str(task.info)
 
     return jsonify(response)
