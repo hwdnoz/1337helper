@@ -9,6 +9,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import redis
+from utils import redis_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -210,15 +211,12 @@ class PromptCache:
         r.set('cache_enabled', '1' if enabled else '0')
         return enabled
 
+    @redis_fallback(default_value=True)
     def is_enabled(self):
         """Read cache enabled state from Redis (shared across all containers)"""
-        try:
-            r = self._get_redis_client()
-            value = r.get('cache_enabled')
-            return value == '1' if value is not None else True  # Default True
-        except:
-            # Fallback if Redis unavailable
-            return True
+        r = self._get_redis_client()
+        value = r.get('cache_enabled')
+        return value == '1' if value is not None else True  # Default True
 
     def set_model_aware_cache(self, model_aware):
         """Store model-aware cache state in Redis (shared across all containers)"""
@@ -226,15 +224,12 @@ class PromptCache:
         r.set('model_aware_cache', '1' if model_aware else '0')
         return model_aware
 
+    @redis_fallback(default_value=True)
     def is_model_aware_cache(self):
         """Read model-aware cache state from Redis (shared across all containers)"""
-        try:
-            r = self._get_redis_client()
-            value = r.get('model_aware_cache')
-            return value == '1' if value is not None else True  # Default True
-        except:
-            # Fallback if Redis unavailable
-            return True
+        r = self._get_redis_client()
+        value = r.get('model_aware_cache')
+        return value == '1' if value is not None else True  # Default True
 
     def set_current_model(self, model):
         """Store current model in Redis (shared across all containers)"""
@@ -242,15 +237,12 @@ class PromptCache:
         r.set('current_model', model)
         return model
 
+    @redis_fallback(default_value='gemini-2.5-flash')
     def get_current_model(self):
         """Read current model from Redis (shared across all containers)"""
-        try:
-            r = self._get_redis_client()
-            model = r.get('current_model')
-            return model if model else 'gemini-2.5-flash'  # Default model
-        except:
-            # Fallback if Redis unavailable
-            return 'gemini-2.5-flash'
+        r = self._get_redis_client()
+        model = r.get('current_model')
+        return model if model else 'gemini-2.5-flash'  # Default model
 
     def set_semantic_cache_enabled(self, enabled):
         """Store semantic cache enabled state in Redis (shared across all containers)"""
@@ -258,24 +250,19 @@ class PromptCache:
         r.set('semantic_cache_enabled', '1' if enabled else '0')
         return enabled
 
+    @redis_fallback(default_value=False)
     def is_semantic_cache_enabled(self):
         """Read semantic cache enabled state from Redis (shared across all containers)"""
-        try:
-            r = self._get_redis_client()
-            value = r.get('semantic_cache_enabled')
-            return value == '1' if value is not None else False  # Default False
-        except:
-            # Fallback if Redis unavailable
-            return False
+        r = self._get_redis_client()
+        value = r.get('semantic_cache_enabled')
+        return value == '1' if value is not None else False  # Default False
 
+    @redis_fallback(default_value=0.95)
     def get_semantic_similarity_threshold(self):
         """Get semantic similarity threshold from Redis (default 0.95)"""
-        try:
-            r = self._get_redis_client()
-            value = r.get('semantic_similarity_threshold')
-            return float(value) if value else 0.95
-        except:
-            return 0.95
+        r = self._get_redis_client()
+        value = r.get('semantic_similarity_threshold')
+        return float(value) if value else 0.95
 
     def _find_similar_prompt(self, prompt, operation_type, model=None, model_aware_cache=None, metadata=None):
         """Find similar cached prompt using semantic search (TF-IDF + cosine similarity)
@@ -330,8 +317,8 @@ class PromptCache:
                         )
                         if metadata_match:
                             filtered_prompts.append(cp)
-                    except:
-                        # Skip entries with invalid metadata
+                    except (json.JSONDecodeError, TypeError, AttributeError) as e:
+                        logger.debug(f"Skipping cache entry with invalid metadata: {e}")
                         continue
             cached_prompts = filtered_prompts
 
