@@ -3,6 +3,7 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
+from utils import sqlite_connection
 
 class ObservabilityLogger:
     def __init__(self, db_path='data/llm_metrics.db'):
@@ -11,44 +12,39 @@ class ObservabilityLogger:
 
     def _init_database(self):
         """Initialize the SQLite database and create tables if they don't exist."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with sqlite_connection(self.db_path) as (conn, cursor):
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS llm_calls (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    operation_type TEXT NOT NULL,
+                    prompt TEXT NOT NULL,
+                    prompt_preview TEXT NOT NULL,
+                    prompt_length INTEGER NOT NULL,
+                    response_text TEXT NOT NULL,
+                    response_preview TEXT NOT NULL,
+                    response_length INTEGER NOT NULL,
+                    tokens_sent INTEGER NOT NULL,
+                    tokens_received INTEGER NOT NULL,
+                    total_tokens INTEGER NOT NULL,
+                    latency_ms REAL NOT NULL,
+                    success BOOLEAN NOT NULL,
+                    error TEXT,
+                    metadata TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
 
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS llm_calls (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp TEXT NOT NULL,
-                operation_type TEXT NOT NULL,
-                prompt TEXT NOT NULL,
-                prompt_preview TEXT NOT NULL,
-                prompt_length INTEGER NOT NULL,
-                response_text TEXT NOT NULL,
-                response_preview TEXT NOT NULL,
-                response_length INTEGER NOT NULL,
-                tokens_sent INTEGER NOT NULL,
-                tokens_received INTEGER NOT NULL,
-                total_tokens INTEGER NOT NULL,
-                latency_ms REAL NOT NULL,
-                success BOOLEAN NOT NULL,
-                error TEXT,
-                metadata TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-
-        # Create indexes for common queries
-        cursor.execute('''
-            CREATE INDEX IF NOT EXISTS idx_timestamp ON llm_calls(timestamp DESC)
-        ''')
-        cursor.execute('''
-            CREATE INDEX IF NOT EXISTS idx_operation_type ON llm_calls(operation_type)
-        ''')
-        cursor.execute('''
-            CREATE INDEX IF NOT EXISTS idx_success ON llm_calls(success)
-        ''')
-
-        conn.commit()
-        conn.close()
+            # Create indexes for common queries
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_timestamp ON llm_calls(timestamp DESC)
+            ''')
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_operation_type ON llm_calls(operation_type)
+            ''')
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_success ON llm_calls(success)
+            ''')
 
     def log_llm_call(self, operation_type, prompt, response_text, tokens_sent, tokens_received,
                      latency_ms, error=None, metadata=None):
@@ -70,25 +66,20 @@ class ObservabilityLogger:
         response_preview = response_text[:200] + '...' if len(response_text) > 200 else response_text
         metadata_json = json.dumps(metadata) if metadata else None
 
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        cursor.execute('''
-            INSERT INTO llm_calls (
-                timestamp, operation_type, prompt, prompt_preview, prompt_length,
-                response_text, response_preview, response_length,
-                tokens_sent, tokens_received, total_tokens,
-                latency_ms, success, error, metadata
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            timestamp, operation_type, prompt, prompt_preview, len(prompt),
-            response_text, response_preview, len(response_text),
-            tokens_sent, tokens_received, tokens_sent + tokens_received,
-            latency_ms, error is None, error, metadata_json
-        ))
-
-        conn.commit()
-        conn.close()
+        with sqlite_connection(self.db_path) as (conn, cursor):
+            cursor.execute('''
+                INSERT INTO llm_calls (
+                    timestamp, operation_type, prompt, prompt_preview, prompt_length,
+                    response_text, response_preview, response_length,
+                    tokens_sent, tokens_received, total_tokens,
+                    latency_ms, success, error, metadata
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                timestamp, operation_type, prompt, prompt_preview, len(prompt),
+                response_text, response_preview, len(response_text),
+                tokens_sent, tokens_received, tokens_sent + tokens_received,
+                latency_ms, error is None, error, metadata_json
+            ))
 
         return {
             'timestamp': timestamp,
@@ -109,22 +100,18 @@ class ObservabilityLogger:
         Returns:
             List of log entries, most recent first
         """
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        with sqlite_connection(self.db_path, row_factory=sqlite3.Row) as (conn, cursor):
+            cursor.execute('''
+                SELECT
+                    id, timestamp, operation_type, prompt, prompt_preview, prompt_length,
+                    response_text, response_preview, response_length, tokens_sent, tokens_received,
+                    total_tokens, latency_ms, success, error, metadata
+                FROM llm_calls
+                ORDER BY timestamp DESC
+                LIMIT ?
+            ''', (limit,))
 
-        cursor.execute('''
-            SELECT
-                id, timestamp, operation_type, prompt, prompt_preview, prompt_length,
-                response_text, response_preview, response_length, tokens_sent, tokens_received,
-                total_tokens, latency_ms, success, error, metadata
-            FROM llm_calls
-            ORDER BY timestamp DESC
-            LIMIT ?
-        ''', (limit,))
-
-        rows = cursor.fetchall()
-        conn.close()
+            rows = cursor.fetchall()
 
         metrics = []
         for row in rows:
@@ -143,33 +130,29 @@ class ObservabilityLogger:
         Returns:
             Dictionary with aggregate metrics
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with sqlite_connection(self.db_path) as (conn, cursor):
+            # Get overall stats
+            cursor.execute('''
+                SELECT
+                    COUNT(*) as total_calls,
+                    SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successful_calls,
+                    SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as failed_calls,
+                    SUM(total_tokens) as total_tokens,
+                    AVG(latency_ms) as avg_latency_ms,
+                    SUM(latency_ms) as total_latency_ms
+                FROM llm_calls
+            ''')
 
-        # Get overall stats
-        cursor.execute('''
-            SELECT
-                COUNT(*) as total_calls,
-                SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successful_calls,
-                SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as failed_calls,
-                SUM(total_tokens) as total_tokens,
-                AVG(latency_ms) as avg_latency_ms,
-                SUM(latency_ms) as total_latency_ms
-            FROM llm_calls
-        ''')
+            stats = cursor.fetchone()
 
-        stats = cursor.fetchone()
+            # Get operation breakdown
+            cursor.execute('''
+                SELECT operation_type, COUNT(*) as count
+                FROM llm_calls
+                GROUP BY operation_type
+            ''')
 
-        # Get operation breakdown
-        cursor.execute('''
-            SELECT operation_type, COUNT(*) as count
-            FROM llm_calls
-            GROUP BY operation_type
-        ''')
-
-        operation_breakdown = {row[0]: row[1] for row in cursor.fetchall()}
-
-        conn.close()
+            operation_breakdown = {row[0]: row[1] for row in cursor.fetchall()}
 
         return {
             'total_calls': stats[0] or 0,
@@ -183,16 +166,12 @@ class ObservabilityLogger:
 
     def get_call_by_id(self, call_id):
         """Get full details of a specific LLM call including full prompt and response."""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        with sqlite_connection(self.db_path, row_factory=sqlite3.Row) as (conn, cursor):
+            cursor.execute('''
+                SELECT * FROM llm_calls WHERE id = ?
+            ''', (call_id,))
 
-        cursor.execute('''
-            SELECT * FROM llm_calls WHERE id = ?
-        ''', (call_id,))
-
-        row = cursor.fetchone()
-        conn.close()
+            row = cursor.fetchone()
 
         if row:
             call = dict(row)

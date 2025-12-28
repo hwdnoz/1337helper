@@ -6,6 +6,8 @@ from functools import wraps
 from flask import jsonify
 import redis
 import logging
+import sqlite3
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
@@ -80,3 +82,41 @@ def redis_fallback(default_value):
                 return default_value
         return wrapper
     return decorator
+
+
+@contextmanager
+def sqlite_connection(db_path, row_factory=None):
+    """
+    Context manager for SQLite database connections.
+
+    Automatically handles connection creation, commit on success,
+    rollback on error, and ensures connection is always closed.
+
+    Usage:
+        with sqlite_connection('data/db.sqlite') as (conn, cursor):
+            cursor.execute('SELECT * FROM table')
+            rows = cursor.fetchall()
+            # Auto-commits on success
+        # Connection automatically closed
+
+        # With row_factory for dict results:
+        with sqlite_connection('data/db.sqlite', row_factory=sqlite3.Row) as (conn, cursor):
+            cursor.execute('SELECT * FROM table')
+            row = cursor.fetchone()
+            data = dict(row)
+    """
+    conn = sqlite3.connect(db_path)
+    if row_factory:
+        conn.row_factory = row_factory
+    cursor = conn.cursor()
+
+    try:
+        yield conn, cursor
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Database error in {db_path}, rolling back: {e}")
+        raise
+    finally:
+        cursor.close()
+        conn.close()

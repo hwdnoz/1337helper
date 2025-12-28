@@ -9,7 +9,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import redis
-from utils import redis_fallback
+from utils import redis_fallback, sqlite_connection
 
 logger = logging.getLogger(__name__)
 
@@ -26,34 +26,29 @@ class PromptCache:
                           password=password, decode_responses=True)
 
     def _init_database(self):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with sqlite_connection(self.db_path) as (conn, cursor):
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS prompt_cache (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    prompt_hash TEXT UNIQUE NOT NULL,
+                    prompt TEXT NOT NULL,
+                    operation_type TEXT NOT NULL,
+                    model TEXT,
+                    response_text TEXT NOT NULL,
+                    metadata TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    accessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    access_count INTEGER DEFAULT 1
+                )
+            ''')
 
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS prompt_cache (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                prompt_hash TEXT UNIQUE NOT NULL,
-                prompt TEXT NOT NULL,
-                operation_type TEXT NOT NULL,
-                model TEXT,
-                response_text TEXT NOT NULL,
-                metadata TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                accessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                access_count INTEGER DEFAULT 1
-            )
-        ''')
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_prompt_hash ON prompt_cache(prompt_hash)
+            ''')
 
-        cursor.execute('''
-            CREATE INDEX IF NOT EXISTS idx_prompt_hash ON prompt_cache(prompt_hash)
-        ''')
-
-        cursor.execute('''
-            CREATE INDEX IF NOT EXISTS idx_created_at ON prompt_cache(created_at)
-        ''')
-
-        conn.commit()
-        conn.close()
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_created_at ON prompt_cache(created_at)
+            ''')
 
     def _hash_prompt(self, prompt, operation_type, model=None, model_aware_cache=None):
         # Use provided model_aware_cache setting, or fall back to Redis setting
@@ -77,35 +72,28 @@ class PromptCache:
 
         # Try exact hash match first
         prompt_hash = self._hash_prompt(prompt, operation_type, model, model_aware_cache)
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-
         expiry_time = datetime.utcnow() - timedelta(hours=self.ttl_hours)
 
-        cursor.execute('''
-            SELECT * FROM prompt_cache
-            WHERE prompt_hash = ? AND created_at > ?
-        ''', (prompt_hash, expiry_time.isoformat()))
-
-        row = cursor.fetchone()
-
-        if row:
+        with sqlite_connection(self.db_path, row_factory=sqlite3.Row) as (conn, cursor):
             cursor.execute('''
-                UPDATE prompt_cache
-                SET accessed_at = ?, access_count = access_count + 1
-                WHERE prompt_hash = ?
-            ''', (datetime.utcnow().isoformat(), prompt_hash))
-            conn.commit()
+                SELECT * FROM prompt_cache
+                WHERE prompt_hash = ? AND created_at > ?
+            ''', (prompt_hash, expiry_time.isoformat()))
 
-            result = dict(row)
-            if result['metadata']:
-                result['metadata'] = json.loads(result['metadata'])
+            row = cursor.fetchone()
 
-            conn.close()
-            return result
+            if row:
+                cursor.execute('''
+                    UPDATE prompt_cache
+                    SET accessed_at = ?, access_count = access_count + 1
+                    WHERE prompt_hash = ?
+                ''', (datetime.utcnow().isoformat(), prompt_hash))
 
-        conn.close()
+                result = dict(row)
+                if result['metadata']:
+                    result['metadata'] = json.loads(result['metadata'])
+
+                return result
 
         # If no exact match, try semantic search (if enabled)
         semantic_result = self._find_similar_prompt(prompt, operation_type, model, model_aware_cache, metadata)
@@ -124,75 +112,57 @@ class PromptCache:
         prompt_hash = self._hash_prompt(prompt, operation_type, model, model_aware_cache)
         metadata_json = json.dumps(metadata) if metadata else None
 
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        cursor.execute('''
-            INSERT OR REPLACE INTO prompt_cache (
-                prompt_hash, prompt, operation_type, model, response_text, metadata,
-                created_at, accessed_at, access_count
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            prompt_hash, prompt, operation_type, model, response_text, metadata_json,
-            datetime.utcnow().isoformat(),
-            datetime.utcnow().isoformat(),
-            1
-        ))
-
-        conn.commit()
-        conn.close()
+        with sqlite_connection(self.db_path) as (conn, cursor):
+            cursor.execute('''
+                INSERT OR REPLACE INTO prompt_cache (
+                    prompt_hash, prompt, operation_type, model, response_text, metadata,
+                    created_at, accessed_at, access_count
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                prompt_hash, prompt, operation_type, model, response_text, metadata_json,
+                datetime.utcnow().isoformat(),
+                datetime.utcnow().isoformat(),
+                1
+            ))
 
     def clear_expired(self):
         expiry_time = datetime.utcnow() - timedelta(hours=self.ttl_hours)
 
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with sqlite_connection(self.db_path) as (conn, cursor):
+            cursor.execute('''
+                DELETE FROM prompt_cache WHERE created_at < ?
+            ''', (expiry_time.isoformat(),))
 
-        cursor.execute('''
-            DELETE FROM prompt_cache WHERE created_at < ?
-        ''', (expiry_time.isoformat(),))
-
-        deleted_count = cursor.rowcount
-        conn.commit()
-        conn.close()
+            deleted_count = cursor.rowcount
 
         return deleted_count
 
     def clear_all(self):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        cursor.execute('DELETE FROM prompt_cache')
-        deleted_count = cursor.rowcount
-
-        conn.commit()
-        conn.close()
+        with sqlite_connection(self.db_path) as (conn, cursor):
+            cursor.execute('DELETE FROM prompt_cache')
+            deleted_count = cursor.rowcount
 
         return deleted_count
 
     def get_stats(self):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with sqlite_connection(self.db_path) as (conn, cursor):
+            cursor.execute('''
+                SELECT
+                    COUNT(*) as total_entries,
+                    SUM(access_count) as total_accesses,
+                    AVG(access_count) as avg_accesses_per_entry
+                FROM prompt_cache
+            ''')
 
-        cursor.execute('''
-            SELECT
-                COUNT(*) as total_entries,
-                SUM(access_count) as total_accesses,
-                AVG(access_count) as avg_accesses_per_entry
-            FROM prompt_cache
-        ''')
+            stats = cursor.fetchone()
 
-        stats = cursor.fetchone()
+            cursor.execute('''
+                SELECT operation_type, COUNT(*) as count
+                FROM prompt_cache
+                GROUP BY operation_type
+            ''')
 
-        cursor.execute('''
-            SELECT operation_type, COUNT(*) as count
-            FROM prompt_cache
-            GROUP BY operation_type
-        ''')
-
-        operation_breakdown = {row[0]: row[1] for row in cursor.fetchall()}
-
-        conn.close()
+            operation_breakdown = {row[0]: row[1] for row in cursor.fetchall()}
 
         return {
             'total_entries': stats[0] or 0,
@@ -276,26 +246,22 @@ class PromptCache:
         use_model_aware = model_aware_cache if model_aware_cache is not None else self.is_model_aware_cache()
         threshold = self.get_semantic_similarity_threshold()
 
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-
         expiry_time = datetime.utcnow() - timedelta(hours=self.ttl_hours)
 
         # Get all non-expired prompts for this operation type (and model if model-aware)
-        if use_model_aware and model:
-            cursor.execute('''
-                SELECT * FROM prompt_cache
-                WHERE operation_type = ? AND model = ? AND created_at > ?
-            ''', (operation_type, model, expiry_time.isoformat()))
-        else:
-            cursor.execute('''
-                SELECT * FROM prompt_cache
-                WHERE operation_type = ? AND created_at > ?
-            ''', (operation_type, expiry_time.isoformat()))
+        with sqlite_connection(self.db_path, row_factory=sqlite3.Row) as (conn, cursor):
+            if use_model_aware and model:
+                cursor.execute('''
+                    SELECT * FROM prompt_cache
+                    WHERE operation_type = ? AND model = ? AND created_at > ?
+                ''', (operation_type, model, expiry_time.isoformat()))
+            else:
+                cursor.execute('''
+                    SELECT * FROM prompt_cache
+                    WHERE operation_type = ? AND created_at > ?
+                ''', (operation_type, expiry_time.isoformat()))
 
-        rows = cursor.fetchall()
-        conn.close()
+            rows = cursor.fetchall()
 
         if not rows:
             return None
@@ -348,15 +314,12 @@ class PromptCache:
                 best_match['current_prompt'] = prompt  # Include current prompt for diff comparison
 
                 # Update access stats for the matched entry
-                conn = sqlite3.connect(self.db_path)
-                cursor = conn.cursor()
-                cursor.execute('''
-                    UPDATE prompt_cache
-                    SET accessed_at = ?, access_count = access_count + 1
-                    WHERE prompt_hash = ?
-                ''', (datetime.utcnow().isoformat(), best_match['prompt_hash']))
-                conn.commit()
-                conn.close()
+                with sqlite_connection(self.db_path) as (conn, cursor):
+                    cursor.execute('''
+                        UPDATE prompt_cache
+                        SET accessed_at = ?, access_count = access_count + 1
+                        WHERE prompt_hash = ?
+                    ''', (datetime.utcnow().isoformat(), best_match['prompt_hash']))
 
                 return best_match
         except Exception as e:
@@ -366,23 +329,19 @@ class PromptCache:
         return None
 
     def get_all_entries(self, limit=100):
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        with sqlite_connection(self.db_path, row_factory=sqlite3.Row) as (conn, cursor):
+            cursor.execute('''
+                SELECT
+                    id, prompt_hash, operation_type, model,
+                    substr(prompt, 1, 100) as prompt_preview,
+                    substr(response_text, 1, 100) as response_preview,
+                    created_at, accessed_at, access_count
+                FROM prompt_cache
+                ORDER BY accessed_at DESC
+                LIMIT ?
+            ''', (limit,))
 
-        cursor.execute('''
-            SELECT
-                id, prompt_hash, operation_type, model,
-                substr(prompt, 1, 100) as prompt_preview,
-                substr(response_text, 1, 100) as response_preview,
-                created_at, accessed_at, access_count
-            FROM prompt_cache
-            ORDER BY accessed_at DESC
-            LIMIT ?
-        ''', (limit,))
-
-        rows = cursor.fetchall()
-        conn.close()
+            rows = cursor.fetchall()
 
         return [dict(row) for row in rows]
 
