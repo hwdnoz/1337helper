@@ -5,6 +5,33 @@ from utils import handle_errors
 cache_bp = Blueprint('cache', __name__)
 
 
+def create_cache_setting_routes(path, key, getter_fn, setter_fn, default_value=True):
+    """
+    Factory function to create GET/POST route pairs for cache settings.
+
+    Args:
+        path: API path (e.g., '/api/cache/enabled')
+        key: JSON key for the setting (e.g., 'enabled')
+        getter_fn: Function to get current value
+        setter_fn: Function to set new value
+        default_value: Default value for POST requests
+    """
+    @cache_bp.route(path, methods=['GET'])
+    @handle_errors
+    def get_setting():
+        return {key: getter_fn()}
+
+    @cache_bp.route(path, methods=['POST'])
+    @handle_errors
+    def set_setting():
+        value = request.json.get(key, default_value)
+        setter_fn(value)
+        return {key: getter_fn()}
+
+    # Return functions to allow endpoint name customization if needed
+    return get_setting, set_setting
+
+
 @cache_bp.route('/api/cache/stats', methods=['GET'])
 @handle_errors
 def get_cache_stats():
@@ -34,49 +61,27 @@ def clear_expired_cache():
     return {'deleted_count': cache.clear_expired()}
 
 
-@cache_bp.route('/api/cache/enabled', methods=['GET'])
-@handle_errors
-def get_cache_enabled():
-    """Get cache enabled status"""
-    return {'enabled': cache.is_enabled()}
+# Create GET/POST route pairs using factory
+get_cache_enabled, set_cache_enabled = create_cache_setting_routes(
+    '/api/cache/enabled',
+    'enabled',
+    cache.is_enabled,
+    cache.set_enabled,
+    default_value=True
+)
 
+get_cache_model_aware, set_cache_model_aware = create_cache_setting_routes(
+    '/api/cache/model-aware',
+    'model_aware',
+    cache.is_model_aware_cache,
+    cache.set_model_aware_cache,
+    default_value=True
+)
 
-@cache_bp.route('/api/cache/enabled', methods=['POST'])
-@handle_errors
-def set_cache_enabled():
-    """Set cache enabled status"""
-    enabled = request.json.get('enabled', True)
-    cache.set_enabled(enabled)
-    return {'enabled': cache.is_enabled()}
-
-
-@cache_bp.route('/api/cache/model-aware', methods=['GET'])
-@handle_errors
-def get_cache_model_aware():
-    """Get model-aware cache status"""
-    return {'model_aware': cache.is_model_aware_cache()}
-
-
-@cache_bp.route('/api/cache/model-aware', methods=['POST'])
-@handle_errors
-def set_cache_model_aware():
-    """Set model-aware cache status"""
-    model_aware = request.json.get('model_aware', True)
-    cache.set_model_aware_cache(model_aware)
-    return {'model_aware': cache.is_model_aware_cache()}
-
-
-@cache_bp.route('/api/cache/semantic-enabled', methods=['GET'])
-@handle_errors
-def get_semantic_cache_enabled():
-    """Get semantic cache enabled status"""
-    return {'semantic_enabled': cache.is_semantic_cache_enabled()}
-
-
-@cache_bp.route('/api/cache/semantic-enabled', methods=['POST'])
-@handle_errors
-def set_semantic_cache_enabled():
-    """Set semantic cache enabled status"""
-    semantic_enabled = request.json.get('semantic_enabled', False)
-    cache.set_semantic_cache_enabled(semantic_enabled)
-    return {'semantic_enabled': cache.is_semantic_cache_enabled()}
+get_semantic_cache_enabled, set_semantic_cache_enabled = create_cache_setting_routes(
+    '/api/cache/semantic-enabled',
+    'semantic_enabled',
+    cache.is_semantic_cache_enabled,
+    cache.set_semantic_cache_enabled,
+    default_value=False
+)
