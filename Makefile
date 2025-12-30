@@ -83,6 +83,10 @@ compose-reload:
 	@docker system prune -af
 	@docker compose up --scale backend=5
 
+# example command for rebuilding service
+compose-rebuild-service:
+	@docker compose up --build -d $(SERVICE)
+
 # use below with care; uncoment to use;
 # will stop and remove all containers, images, and volumes including those unrelated to this application
 
