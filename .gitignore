@@ -4,6 +4,7 @@ node_modules/
 data/
 *.db
 TODO.md
+docs/
 __pycache__/
 *.pyc
 *.pyo
