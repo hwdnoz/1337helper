@@ -25,6 +25,36 @@ class PromptCache:
         return redis.Redis(host='redis', port=6379, db=1,
                           password=password, decode_responses=True)
 
+    def _get_redis_bool(self, key, default=True):
+        """Get boolean value from Redis (stored as '1'/'0')"""
+        r = self._get_redis_client()
+        value = r.get(key)
+        return value == '1' if value is not None else default
+
+    def _set_redis_bool(self, key, value):
+        """Set boolean value in Redis (stored as '1'/'0')"""
+        r = self._get_redis_client()
+        r.set(key, '1' if value else '0')
+        return value
+
+    def _get_redis_string(self, key, default=None):
+        """Get string value from Redis"""
+        r = self._get_redis_client()
+        value = r.get(key)
+        return value if value else default
+
+    def _set_redis_string(self, key, value):
+        """Set string value in Redis"""
+        r = self._get_redis_client()
+        r.set(key, value)
+        return value
+
+    def _get_redis_float(self, key, default=None):
+        """Get float value from Redis"""
+        r = self._get_redis_client()
+        value = r.get(key)
+        return float(value) if value else default
+
     def _init_database(self):
         with sqlite_connection(self.db_path) as (conn, cursor):
             cursor.execute('''
@@ -177,62 +207,44 @@ class PromptCache:
 
     def set_enabled(self, enabled):
         """Store cache enabled state in Redis (shared across all containers)"""
-        r = self._get_redis_client()
-        r.set('cache_enabled', '1' if enabled else '0')
-        return enabled
+        return self._set_redis_bool('cache_enabled', enabled)
 
     @redis_fallback(default_value=True)
     def is_enabled(self):
         """Read cache enabled state from Redis (shared across all containers)"""
-        r = self._get_redis_client()
-        value = r.get('cache_enabled')
-        return value == '1' if value is not None else True  # Default True
+        return self._get_redis_bool('cache_enabled', default=True)
 
     def set_model_aware_cache(self, model_aware):
         """Store model-aware cache state in Redis (shared across all containers)"""
-        r = self._get_redis_client()
-        r.set('model_aware_cache', '1' if model_aware else '0')
-        return model_aware
+        return self._set_redis_bool('model_aware_cache', model_aware)
 
     @redis_fallback(default_value=True)
     def is_model_aware_cache(self):
         """Read model-aware cache state from Redis (shared across all containers)"""
-        r = self._get_redis_client()
-        value = r.get('model_aware_cache')
-        return value == '1' if value is not None else True  # Default True
+        return self._get_redis_bool('model_aware_cache', default=True)
 
     def set_current_model(self, model):
         """Store current model in Redis (shared across all containers)"""
-        r = self._get_redis_client()
-        r.set('current_model', model)
-        return model
+        return self._set_redis_string('current_model', model)
 
     @redis_fallback(default_value='gemini-2.5-flash')
     def get_current_model(self):
         """Read current model from Redis (shared across all containers)"""
-        r = self._get_redis_client()
-        model = r.get('current_model')
-        return model if model else 'gemini-2.5-flash'  # Default model
+        return self._get_redis_string('current_model', default='gemini-2.5-flash')
 
     def set_semantic_cache_enabled(self, enabled):
         """Store semantic cache enabled state in Redis (shared across all containers)"""
-        r = self._get_redis_client()
-        r.set('semantic_cache_enabled', '1' if enabled else '0')
-        return enabled
+        return self._set_redis_bool('semantic_cache_enabled', enabled)
 
     @redis_fallback(default_value=False)
     def is_semantic_cache_enabled(self):
         """Read semantic cache enabled state from Redis (shared across all containers)"""
-        r = self._get_redis_client()
-        value = r.get('semantic_cache_enabled')
-        return value == '1' if value is not None else False  # Default False
+        return self._get_redis_bool('semantic_cache_enabled', default=False)
 
     @redis_fallback(default_value=0.95)
     def get_semantic_similarity_threshold(self):
         """Get semantic similarity threshold from Redis (default 0.95)"""
-        r = self._get_redis_client()
-        value = r.get('semantic_similarity_threshold')
-        return float(value) if value else 0.95
+        return self._get_redis_float('semantic_similarity_threshold', default=0.95)
 
     def _find_similar_prompt(self, prompt, operation_type, model=None, model_aware_cache=None, metadata=None):
         """Find similar cached prompt using semantic search (TF-IDF + cosine similarity)
