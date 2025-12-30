@@ -9,7 +9,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import redis
-from utils import redis_fallback, sqlite_connection
+from utils import redis_fallback, sqlite_connection, parse_metadata_json
 
 logger = logging.getLogger(__name__)
 
@@ -120,16 +120,14 @@ class PromptCache:
                 ''', (datetime.utcnow().isoformat(), prompt_hash))
 
                 result = dict(row)
-                if result['metadata']:
-                    result['metadata'] = json.loads(result['metadata'])
+                result['metadata'] = parse_metadata_json(result['metadata'])
 
                 return result
 
         # If no exact match, try semantic search (if enabled)
         semantic_result = self._find_similar_prompt(prompt, operation_type, model, model_aware_cache, metadata)
         if semantic_result:
-            if semantic_result.get('metadata'):
-                semantic_result['metadata'] = json.loads(semantic_result['metadata']) if isinstance(semantic_result['metadata'], str) else semantic_result['metadata']
+            semantic_result['metadata'] = parse_metadata_json(semantic_result.get('metadata'))
         return semantic_result
 
     def set(self, prompt, operation_type, response_text, metadata=None, model=None, use_cache=None, model_aware_cache=None):

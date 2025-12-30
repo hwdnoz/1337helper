@@ -3,7 +3,7 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
-from utils import sqlite_connection
+from utils import sqlite_connection, parse_metadata_json
 
 class ObservabilityLogger:
     def __init__(self, db_path='data/llm_metrics.db'):
@@ -116,9 +116,7 @@ class ObservabilityLogger:
         metrics = []
         for row in rows:
             metric = dict(row)
-            # Parse metadata JSON
-            if metric['metadata']:
-                metric['metadata'] = json.loads(metric['metadata'])
+            metric['metadata'] = parse_metadata_json(metric['metadata'])
             metrics.append(metric)
 
         return metrics
@@ -175,8 +173,7 @@ class ObservabilityLogger:
 
         if row:
             call = dict(row)
-            if call['metadata']:
-                call['metadata'] = json.loads(call['metadata'])
+            call['metadata'] = parse_metadata_json(call['metadata'])
             return call
         return None
 

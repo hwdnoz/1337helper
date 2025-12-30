@@ -7,6 +7,7 @@ from flask import jsonify
 import redis
 import logging
 import sqlite3
+import json
 from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
@@ -82,6 +83,32 @@ def redis_fallback(default_value):
                 return default_value
         return wrapper
     return decorator
+
+
+def parse_metadata_json(metadata):
+    """
+    Parse metadata from JSON string to dict, handling all cases.
+
+    Args:
+        metadata: Can be None, dict, or JSON string
+
+    Returns:
+        dict or None
+
+    Usage:
+        row['metadata'] = parse_metadata_json(row['metadata'])
+    """
+    if not metadata:
+        return None
+    if isinstance(metadata, dict):
+        return metadata
+    if isinstance(metadata, str):
+        try:
+            return json.loads(metadata)
+        except json.JSONDecodeError:
+            logger.warning(f"Failed to parse metadata JSON: {metadata[:100]}")
+            return None
+    return None
 
 
 @contextmanager
