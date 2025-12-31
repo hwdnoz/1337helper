@@ -77,15 +77,24 @@ docker-remove-images:
 	@docker rmi -f 1337helper-frontend 2>/dev/null || true
 
 compose-up:
-	BACKEND_TYPE=$(BACKEND_TYPE) docker compose up --scale backend=$(BACKEND_SCALE); \
+	@if [ "$(BACKEND_TYPE)" = "node" ]; then \
+		echo "Starting Node backend (Redis only, no RabbitMQ/Celery)..."; \
+	else \
+		echo "Starting Python backend (Redis + RabbitMQ + Celery)..."; \
+	fi
+	BACKEND_TYPE=$(BACKEND_TYPE) docker compose --profile $(BACKEND_TYPE) up --scale backend=$(BACKEND_SCALE)
 
 compose-down:
 	@docker compose down
 
 compose-reload:
 	@docker compose down
-	@docker system prune -af
-	@docker compose up --scale backend=5
+	@if [ "$(BACKEND_TYPE)" = "node" ]; then \
+		echo "Rebuilding Node backend (Redis only, no RabbitMQ/Celery)..."; \
+	else \
+		echo "Rebuilding Python backend (Redis + RabbitMQ + Celery)..."; \
+	fi
+	BACKEND_TYPE=$(BACKEND_TYPE) docker compose --profile $(BACKEND_TYPE) up --scale backend=$(BACKEND_SCALE) --build
 
 # example command for rebuilding service
 compose-rebuild-service:
