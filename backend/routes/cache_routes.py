@@ -16,12 +16,16 @@ def create_cache_setting_routes(path, key, getter_fn, setter_fn, default_value=T
         setter_fn: Function to set new value
         default_value: Default value for POST requests
     """
-    @cache_bp.route(path, methods=['GET'])
+    # Create unique endpoint names based on the key
+    get_endpoint = f'get_{key}'
+    set_endpoint = f'set_{key}'
+
+    @cache_bp.route(path, methods=['GET'], endpoint=get_endpoint)
     @handle_errors
     def get_setting():
         return {key: getter_fn()}
 
-    @cache_bp.route(path, methods=['POST'])
+    @cache_bp.route(path, methods=['POST'], endpoint=set_endpoint)
     @handle_errors
     def set_setting():
         value = request.json.get(key, default_value)
