@@ -29,8 +29,7 @@ function AppSidebar({
   loadingBasePrompt,
   applyPreset,
   resetPromptToDefault,
-  solveLeetcode,
-  getPresetButtonStyle
+  solveLeetcode
 }) {
   return (
     <>
@@ -92,7 +91,6 @@ function AppSidebar({
             applyPreset={applyPreset}
             resetPromptToDefault={resetPromptToDefault}
             solveLeetcode={solveLeetcode}
-            getPresetButtonStyle={getPresetButtonStyle}
             setSidebarOpen={setSidebarOpen}
           />
         )}

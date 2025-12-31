@@ -1,0 +1,171 @@
+/* Cache Indicator */
+.cache-indicator {
+  fontSize: 0.85rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 2px;
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cache-indicator.hit {
+  color: #4caf50;
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.cache-indicator.miss {
+  color: #888;
+  background: transparent;
+}
+
+.cache-lightning {
+  font-size: 1rem;
+}
+
+.semantic-cache-link {
+  font-weight: bold;
+  color: #9c27b0;
+  cursor: pointer;
+  position: relative;
+  border-bottom: 1px dotted #9c27b0;
+}
+
+/* Prompt Diff Modal */
+.prompt-diff-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #1e1e1e;
+  border: 1px solid #9c27b0;
+  border-radius: 4px;
+  padding: 1rem;
+  min-width: 500px;
+  max-width: 700px;
+  max-height: 500px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.prompt-diff-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.prompt-diff-title {
+  color: #fff;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.prompt-diff-close {
+  background: transparent;
+  border: none;
+  color: #d4d4d4;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.prompt-diff-section {
+  margin-bottom: 0.75rem;
+}
+
+.prompt-diff-section:last-child {
+  margin-bottom: 0;
+}
+
+.prompt-diff-label {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+}
+
+.prompt-diff-label.cached {
+  color: #4caf50;
+}
+
+.prompt-diff-label.current {
+  color: #2196f3;
+}
+
+.prompt-diff-content {
+  padding: 0.5rem;
+  border-radius: 3px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: monospace;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.prompt-diff-content.cached {
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  color: #d4d4d4;
+}
+
+.prompt-diff-content.current {
+  background: rgba(33, 150, 243, 0.1);
+  border: 1px solid rgba(33, 150, 243, 0.3);
+  color: #d4d4d4;
+}
+
+/* LeetCode Input */
+.leetcode-input-container {
+  background: #1e1e1e;
+  border: 1px solid #3e3e42;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 2px;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.leetcode-label {
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.leetcode-input {
+  width: 100px;
+  background: #2d2d2d;
+  color: #d4d4d4;
+  border: 1px solid #3e3e42;
+  border-radius: 2px;
+  padding: 0.5rem;
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+/* Preset Button Grid */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.preset-button {
+  padding: 0.5rem;
+  font-size: 0.85rem;
+  background: #555;
+  border: 2px solid transparent;
+  font-weight: 400;
+  position: relative;
+}
+
+.preset-button.active {
+  background: #0e639c;
+  border: 2px solid #1177bb;
+  font-weight: 600;
+}

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './App.css'
+import './styles/sidebar.css'
+import './styles/components.css'
 import { API_URL } from './config'
 import { useJobManager } from './hooks/useJobManager'
 import { usePromptLoader } from './hooks/usePromptLoader'
@@ -224,17 +226,6 @@ function App() {
     }
   }
 
-  const getPresetButtonStyle = (preset) => {
-    const isActive = activePreset === preset
-    return {
-      padding: '0.5rem',
-      fontSize: '0.85rem',
-      background: isActive ? '#0e639c' : '#555',
-      border: isActive ? '2px solid #1177bb' : '2px solid transparent',
-      fontWeight: isActive ? '600' : '400',
-      position: 'relative'
-    }
-  }
 
   const generateTestCases = async () => {
     try {
@@ -320,7 +311,6 @@ function App() {
         applyPreset={applyPreset}
         resetPromptToDefault={resetPromptToDefault}
         solveLeetcode={solveLeetcode}
-        getPresetButtonStyle={getPresetButtonStyle}
       />
     </div>
   )
