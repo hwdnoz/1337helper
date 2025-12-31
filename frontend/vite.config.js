@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import viteCompression from 'vite-plugin-compression'
 import { imagetools } from 'vite-imagetools'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 export default defineConfig({
   plugins: [
@@ -21,7 +22,15 @@ export default defineConfig({
       deleteOriginFile: false
     }),
     // Image optimization (for future use)
-    imagetools()
+    imagetools(),
+    // Bundle analyzer - generates stats.html
+    visualizer({
+      open: false, // Set to true to auto-open in browser
+      filename: 'dist/stats.html',
+      gzipSize: true,
+      brotliSize: true,
+      template: 'treemap' // Options: treemap, sunburst, network
+    })
   ],
   server: { port: 3101 },
   build: {
