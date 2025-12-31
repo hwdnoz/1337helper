@@ -41,6 +41,11 @@ export default defineConfig({
     // Code splitting for better caching
     rollupOptions: {
       output: {
+        // Ensure consistent hashing for better caching
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'codemirror': ['@uiw/react-codemirror', '@codemirror/lang-python', '@replit/codemirror-vim'],
@@ -52,6 +57,12 @@ export default defineConfig({
     // Source maps for debugging (disable in production for smaller size)
     sourcemap: false,
     // Asset inline threshold (assets < 4kb become base64)
-    assetsInlineLimit: 4096
+    assetsInlineLimit: 4096,
+    // Improve module preloading
+    modulePreload: {
+      polyfill: true
+    },
+    // Target modern browsers for better optimization
+    target: 'es2020'
   }
 })
