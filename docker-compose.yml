@@ -48,6 +48,7 @@ services:
       - .env
     volumes:
       - data:/app/data
+      - ./prompts:/prompts:ro
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -74,6 +75,7 @@ services:
       - .env
     volumes:
       - data:/app/data
+      - ./prompts:/prompts:ro
     depends_on:
       rabbitmq:
         condition: service_healthy
