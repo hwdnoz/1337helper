@@ -2,14 +2,14 @@ FROM python:3.11-slim-bookworm
 
 WORKDIR /app
 
+# need curl for healthcheck
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # for caching
 COPY requirements.txt .
 
 # dependencies
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Install curl for health checks
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # application
 COPY . .

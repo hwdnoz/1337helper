@@ -85,11 +85,18 @@ compose-down:
 compose-reload:
 	@docker compose down
 	@docker system prune -af
+	@docker buildx prune -af
 	@docker compose up --scale backend=5
 
-# example command for rebuilding service
 compose-rebuild-service:
 	@docker compose up --build -d $(SERVICE)
+
+test:
+	@echo "Running pytest unit tests..."
+	@cd backend-python && source ../venv/bin/activate && pytest tests/test_api.py -v
+	@echo ""
+	@echo "Running integration tests..."
+	@./backend-python/tests/test_api.sh http://localhost:5102
 
 # use below with care; uncoment to use;
 # will stop and remove all containers, images, and volumes including those unrelated to this application
@@ -98,10 +105,3 @@ compose-rebuild-service:
 # 	@docker system prune -a
 # docker-remove-volumes:
 # 	@docker volume prune -f
-
-test:
-	@echo "Running pytest unit tests..."
-	@cd backend-python && source ../venv/bin/activate && pytest tests/test_api.py -v
-	@echo ""
-	@echo "Running integration tests..."
-	@./backend-python/tests/test_api.sh http://localhost:5102

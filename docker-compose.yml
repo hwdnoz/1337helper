@@ -91,11 +91,10 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:5102
     ports:
       - "5101:3101"
-    env_file:
-      # overrides .env.docker used by frontend/Dockerfile
-      - ./frontend/.env.compose
     depends_on:
       backend:
         condition: service_healthy
