@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import CodeMirror from '@uiw/react-codemirror'
-import { python } from '@codemirror/lang-python'
-import { vim } from '@replit/codemirror-vim'
 import './App.css'
 import { API_URL } from './config'
 import { useJobManager } from './hooks/useJobManager'
 import { usePromptLoader } from './hooks/usePromptLoader'
 import JobQueue from './components/JobQueue'
+import Header from './components/Header'
+import LeetCodeInput from './components/LeetCodeInput'
+import CodeEditorPanel from './components/CodeEditorPanel'
+import OutputPanel from './components/OutputPanel'
+import CacheIndicator from './components/CacheIndicator'
 
 function App() {
   const navigate = useNavigate()
@@ -252,68 +254,18 @@ function App() {
 
   return (
     <div className="app">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h1 style={{ margin: 0 }}>Code Runner</h1>
+      <Header
+        sidebarOpen={sidebarOpen}
+        sidebarMode={sidebarMode}
+        toggleSidebar={toggleSidebar}
+        navigate={navigate}
+      />
 
-        {/* Sidebar Toggle Buttons */}
-        <div className="sidebar-toggles">
-          <button
-            className={`sidebar-toggle-btn ${sidebarOpen && sidebarMode === 'test-case' ? 'active' : ''}`}
-            onClick={() => toggleSidebar('test-case')}
-          >
-            Test Cases
-          </button>
-          <button
-            className={`sidebar-toggle-btn ${sidebarOpen && sidebarMode === 'llm-prompt' ? 'active' : ''}`}
-            onClick={() => toggleSidebar('llm-prompt')}
-          >
-            LLM Prompt
-          </button>
-          <button
-            className={`sidebar-toggle-btn ${sidebarOpen && sidebarMode === 'solution-prompt' ? 'active' : ''}`}
-            onClick={() => toggleSidebar('solution-prompt')}
-          >
-            Solution Prompt
-          </button>
-          <button
-            className="sidebar-toggle-btn"
-            onClick={() => navigate('/admin')}
-          >
-            Admin
-          </button>
-        </div>
-      </div>
-
-      <div style={{
-        background: '#1e1e1e',
-        border: '1px solid #3e3e42',
-        padding: '1rem',
-        marginBottom: '1rem',
-        borderRadius: '2px',
-        display: 'flex',
-        gap: '1rem',
-        alignItems: 'center',
-        flexWrap: 'wrap'
-      }}>
-        <div style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>LeetCode Problem:</div>
-        <input
-          type="number"
-          value={leetcodeNumber}
-          onChange={e => setLeetcodeNumber(e.target.value)}
-          placeholder="e.g., 70"
-          style={{
-            width: '100px',
-            background: '#2d2d2d',
-            color: '#d4d4d4',
-            border: '1px solid #3e3e42',
-            borderRadius: '2px',
-            padding: '0.5rem',
-            fontFamily: 'monospace',
-            fontSize: '0.9rem'
-          }}
-        />
-        <button onClick={openSolutionPromptManager}>Solve</button>
-      </div>
+      <LeetCodeInput
+        leetcodeNumber={leetcodeNumber}
+        setLeetcodeNumber={setLeetcodeNumber}
+        onSolve={openSolutionPromptManager}
+      />
 
       {/* Job Status Display - All Jobs */}
       <JobQueue
@@ -322,157 +274,24 @@ function App() {
         onClearCompleted={clearCompletedJobs}
       />
       <div className="container">
-        <div style={{ flex: '2', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
-            <button
-              onClick={() => setVimEnabled(!vimEnabled)}
-              style={{
-                background: vimEnabled ? '#0e639c' : '#555',
-                opacity: vimEnabled ? 1 : 0.6
-              }}
-            >
-              {vimEnabled ? '✓ ' : ''}Vim
-            </button>
-            <button onClick={runCode}>Run</button>
-            <button onClick={importTestCase}>Import Test Cases</button>
-            <button onClick={clearTestCases}>Clear Test Cases</button>
-          </div>
-          {lastUpdate && (
-            <div style={{
-              fontSize: '0.85rem',
-              color: cacheHit ? '#4caf50' : '#888',
-              padding: '0.25rem 0.5rem',
-              background: cacheHit ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
-              borderRadius: '2px',
-              marginBottom: '0.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              {cacheHit && <span style={{ fontSize: '1rem' }}>⚡</span>}
-              Last updated: {lastUpdate.toLocaleTimeString()}
-              {cacheHit && !semanticCacheHit && <span style={{ fontWeight: 'bold' }}>(from cache)</span>}
-              {semanticCacheHit && (
-                <span
-                  style={{
-                    fontWeight: 'bold',
-                    color: '#9c27b0',
-                    cursor: 'pointer',
-                    position: 'relative',
-                    borderBottom: '1px dotted #9c27b0'
-                  }}
-                  onClick={() => setShowPromptDiff(!showPromptDiff)}
-                  title={cachedPrompt && currentPrompt ? 'Click to see prompt differences' : ''}
-                >
-                  (semantic cache {similarityScore ? `${(similarityScore * 100).toFixed(0)}%` : ''})
-                  {cachedPrompt && currentPrompt && showPromptDiff && (
-                    <div style={{
-                      position: 'fixed',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      background: '#1e1e1e',
-                      border: '1px solid #9c27b0',
-                      borderRadius: '4px',
-                      padding: '1rem',
-                      minWidth: '500px',
-                      maxWidth: '700px',
-                      maxHeight: '500px',
-                      overflowY: 'auto',
-                      overflowX: 'hidden',
-                      zIndex: 9999,
-                      boxShadow: '0 4px 12px rgba(156, 39, 176, 0.3)',
-                      fontSize: '0.85rem',
-                      lineHeight: '1.4'
-                    }}
-                    className="prompt-diff-tooltip"
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <div style={{ color: '#fff', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                          Prompt Comparison
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setShowPromptDiff(false)
-                          }}
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: '#d4d4d4',
-                            fontSize: '1.5rem',
-                            cursor: 'pointer',
-                            padding: '0',
-                            lineHeight: '1'
-                          }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                      <div style={{ marginBottom: '0.75rem' }}>
-                        <div style={{ color: '#4caf50', fontWeight: '600', marginBottom: '0.25rem', fontSize: '0.8rem' }}>
-                          Cached Prompt (returned this result):
-                        </div>
-                        <div style={{
-                          background: 'rgba(76, 175, 80, 0.1)',
-                          padding: '0.5rem',
-                          borderRadius: '3px',
-                          border: '1px solid rgba(76, 175, 80, 0.3)',
-                          color: '#d4d4d4',
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word',
-                          fontFamily: 'monospace',
-                          maxHeight: '200px',
-                          overflowY: 'auto'
-                        }}>
-                          {cachedPrompt}
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ color: '#2196f3', fontWeight: '600', marginBottom: '0.25rem', fontSize: '0.8rem' }}>
-                          Current Prompt (what you asked for):
-                        </div>
-                        <div style={{
-                          background: 'rgba(33, 150, 243, 0.1)',
-                          padding: '0.5rem',
-                          borderRadius: '3px',
-                          border: '1px solid rgba(33, 150, 243, 0.3)',
-                          color: '#d4d4d4',
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word',
-                          fontFamily: 'monospace',
-                          maxHeight: '200px',
-                          overflowY: 'auto'
-                        }}>
-                          {currentPrompt}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </span>
-              )}
-            </div>
-          )}
-          <div style={{ flex: 1, minHeight: 0 }}>
-            <CodeMirror
-              value={code}
-              onChange={setCode}
-              extensions={vimEnabled ? [python(), vim()] : [python()]}
-              theme="dark"
-              basicSetup={{
-                lineNumbers: true,
-                highlightActiveLineGutter: true,
-                highlightActiveLine: true,
-                foldGutter: true
-              }}
-              style={{ fontSize: 14, height: '100%', overflow: 'auto' }}
-            />
-          </div>
-        </div>
-        <div style={{ flex: '1', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-          <div style={{ marginBottom: '0.5rem', color: '#d4d4d4', flexShrink: 0 }}>Output</div>
-          <pre ref={outputRef} style={{ flex: 1, minHeight: 0 }}>{output}</pre>
-        </div>
+        <CodeEditorPanel
+          code={code}
+          setCode={setCode}
+          vimEnabled={vimEnabled}
+          setVimEnabled={setVimEnabled}
+          runCode={runCode}
+          importTestCase={importTestCase}
+          clearTestCases={clearTestCases}
+          lastUpdate={lastUpdate}
+          cacheHit={cacheHit}
+          semanticCacheHit={semanticCacheHit}
+          similarityScore={similarityScore}
+          cachedPrompt={cachedPrompt}
+          currentPrompt={currentPrompt}
+          showPromptDiff={showPromptDiff}
+          setShowPromptDiff={setShowPromptDiff}
+        />
+        <OutputPanel output={output} outputRef={outputRef} />
       </div>
 
       {/* Unified Sidebar */}
