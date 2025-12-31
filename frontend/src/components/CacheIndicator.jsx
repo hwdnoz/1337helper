@@ -1,3 +1,5 @@
+import PromptDiffModal from './PromptDiffModal'
+
 function CacheIndicator({
   lastUpdate,
   cacheHit,
@@ -38,6 +40,13 @@ function CacheIndicator({
           title={cachedPrompt && currentPrompt ? 'Click to see prompt differences' : ''}
         >
           (semantic cache {similarityScore ? `${(similarityScore * 100).toFixed(0)}%` : ''})
+          {cachedPrompt && currentPrompt && showPromptDiff && (
+            <PromptDiffModal
+              cachedPrompt={cachedPrompt}
+              currentPrompt={currentPrompt}
+              onClose={() => setShowPromptDiff(false)}
+            />
+          )}
         </span>
       )}
     </div>

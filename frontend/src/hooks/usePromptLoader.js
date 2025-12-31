@@ -70,6 +70,8 @@ export function usePromptLoader(problemNumber) {
     applyPreset,
     resetPromptToDefault,
     getFinalPrompt,
-    setPromptModifier // Allow manual editing
+    setPromptModifier, // Allow manual editing
+    setBasePrompt, // Allow manual editing of base prompt
+    setActivePreset // Allow manual setting of active preset
   }
 }

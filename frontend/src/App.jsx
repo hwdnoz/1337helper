@@ -9,7 +9,7 @@ import Header from './components/Header'
 import LeetCodeInput from './components/LeetCodeInput'
 import CodeEditorPanel from './components/CodeEditorPanel'
 import OutputPanel from './components/OutputPanel'
-import CacheIndicator from './components/CacheIndicator'
+import AppSidebar from './components/AppSidebar'
 
 function App() {
   const navigate = useNavigate()
@@ -50,7 +50,9 @@ function App() {
     applyPreset,
     resetPromptToDefault,
     getFinalPrompt,
-    setPromptModifier
+    setPromptModifier,
+    setBasePrompt,
+    setActivePreset
   } = usePromptLoader(leetcodeNumber)
 
   useEffect(() => {
@@ -267,7 +269,6 @@ function App() {
         onSolve={openSolutionPromptManager}
       />
 
-      {/* Job Status Display - All Jobs */}
       <JobQueue
         jobs={jobs}
         currentJobId={currentJobId}
@@ -294,293 +295,33 @@ function App() {
         <OutputPanel output={output} outputRef={outputRef} />
       </div>
 
-      {/* Unified Sidebar */}
-      {sidebarOpen && (
-        <div
-          className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-      <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
-          <h2>
-            {sidebarMode === 'test-case' && 'Test Cases'}
-            {sidebarMode === 'llm-prompt' && 'LLM Prompt'}
-            {sidebarMode === 'solution-prompt' && 'Solution Prompt Manager'}
-          </h2>
-          <button
-            className="sidebar-close"
-            onClick={() => setSidebarOpen(false)}
-          >
-            ×
-          </button>
-        </div>
-
-        {/* Test Case Panel */}
-        {sidebarMode === 'test-case' && (
-          <>
-            <div className="sidebar-content">
-              <div className="sidebar-info">
-                Generate or write test cases for your code. Click "Import Test Cases" to add them to your code.
-              </div>
-              <div className="sidebar-section">
-                <label>Test Cases</label>
-                {lastTestCaseUpdate && (
-                  <div style={{
-                    fontSize: '0.85rem',
-                    color: testCaseCacheHit ? '#4caf50' : '#888',
-                    padding: '0.25rem 0.5rem',
-                    background: testCaseCacheHit ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
-                    borderRadius: '2px',
-                    marginBottom: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    {testCaseCacheHit && <span style={{ fontSize: '1rem' }}>⚡</span>}
-                    Last updated: {lastTestCaseUpdate.toLocaleTimeString()}
-                    {testCaseCacheHit && <span style={{ fontWeight: 'bold' }}>(from cache)</span>}
-                  </div>
-                )}
-                <textarea
-                  className="sidebar-textarea"
-                  value={testCase}
-                  onChange={e => setTestCase(e.target.value)}
-                  placeholder="Enter test cases or generate them..."
-                  style={{ minHeight: '400px' }}
-                />
-              </div>
-            </div>
-            <div className="sidebar-footer">
-              <button onClick={generateTestCases}>
-                Generate Test Cases
-              </button>
-              <button onClick={importTestCase}>
-                Import Test Cases
-              </button>
-              <button onClick={clearTestCases} style={{ background: '#555' }}>
-                Clear Test Cases
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* LLM Prompt Panel */}
-        {sidebarMode === 'llm-prompt' && (
-          <>
-            <div className="sidebar-content">
-              <div className="sidebar-info">
-                Enter instructions to modify your current code using AI.
-              </div>
-              {lastUpdate && (
-                <div style={{
-                  fontSize: '0.85rem',
-                  color: cacheHit ? '#4caf50' : '#888',
-                  padding: '0.25rem 0.5rem',
-                  background: cacheHit ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
-                  borderRadius: '2px',
-                  marginBottom: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
-                  {cacheHit && <span style={{ fontSize: '1rem' }}>⚡</span>}
-                  Last updated: {lastUpdate.toLocaleTimeString()}
-                  {cacheHit && !semanticCacheHit && <span style={{ fontWeight: 'bold' }}>(from cache)</span>}
-                  {semanticCacheHit && (
-                    <span
-                      style={{
-                        fontWeight: 'bold',
-                        color: '#9c27b0',
-                        cursor: 'pointer',
-                        position: 'relative',
-                        borderBottom: '1px dotted #9c27b0'
-                      }}
-                      onClick={() => setShowPromptDiff(!showPromptDiff)}
-                      title={cachedPrompt && currentPrompt ? 'Click to see prompt differences' : ''}
-                    >
-                      (semantic cache {similarityScore ? `${(similarityScore * 100).toFixed(0)}%` : ''})
-                      {cachedPrompt && currentPrompt && showPromptDiff && (
-                        <div style={{
-                          position: 'fixed',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          background: '#1e1e1e',
-                          border: '1px solid #9c27b0',
-                          borderRadius: '4px',
-                          padding: '1rem',
-                          minWidth: '500px',
-                          maxWidth: '700px',
-                          maxHeight: '500px',
-                          overflowY: 'auto',
-                          overflowX: 'hidden',
-                          zIndex: 9999,
-                          boxShadow: '0 4px 12px rgba(156, 39, 176, 0.3)',
-                          fontSize: '0.85rem',
-                          lineHeight: '1.4'
-                        }}
-                        className="prompt-diff-tooltip"
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                            <div style={{ color: '#fff', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                              Prompt Comparison
-                            </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setShowPromptDiff(false)
-                              }}
-                              style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#d4d4d4',
-                                fontSize: '1.5rem',
-                                cursor: 'pointer',
-                                padding: '0',
-                                lineHeight: '1'
-                              }}
-                            >
-                              ×
-                            </button>
-                          </div>
-                          <div style={{ marginBottom: '0.75rem' }}>
-                            <div style={{ color: '#4caf50', fontWeight: '600', marginBottom: '0.25rem', fontSize: '0.8rem' }}>
-                              Cached Prompt (returned this result):
-                            </div>
-                            <div style={{
-                              background: 'rgba(76, 175, 80, 0.1)',
-                              padding: '0.5rem',
-                              borderRadius: '3px',
-                              border: '1px solid rgba(76, 175, 80, 0.3)',
-                              color: '#d4d4d4',
-                              whiteSpace: 'pre-wrap',
-                              wordBreak: 'break-word',
-                              fontFamily: 'monospace',
-                              maxHeight: '200px',
-                              overflowY: 'auto'
-                            }}>
-                              {cachedPrompt}
-                            </div>
-                          </div>
-                          <div>
-                            <div style={{ color: '#2196f3', fontWeight: '600', marginBottom: '0.25rem', fontSize: '0.8rem' }}>
-                              Current Prompt (what you asked for):
-                            </div>
-                            <div style={{
-                              background: 'rgba(33, 150, 243, 0.1)',
-                              padding: '0.5rem',
-                              borderRadius: '3px',
-                              border: '1px solid rgba(33, 150, 243, 0.3)',
-                              color: '#d4d4d4',
-                              whiteSpace: 'pre-wrap',
-                              wordBreak: 'break-word',
-                              fontFamily: 'monospace',
-                              maxHeight: '200px',
-                              overflowY: 'auto'
-                            }}>
-                              {currentPrompt}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </span>
-                  )}
-                </div>
-              )}
-              <div className="sidebar-section">
-                <label>Modification Instructions</label>
-                <textarea
-                  className="sidebar-textarea"
-                  value={llmPrompt}
-                  onChange={e => setLlmPrompt(e.target.value)}
-                  placeholder="E.g., 'Add error handling', 'Optimize for performance', 'Add type hints'..."
-                  style={{ minHeight: '400px' }}
-                />
-              </div>
-            </div>
-            <div className="sidebar-footer">
-              <button onClick={applyLlmPrompt}>
-                Apply Prompt
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* Solution Prompt Panel */}
-        {sidebarMode === 'solution-prompt' && (
-          <>
-            <div className="sidebar-content">
-              <div className="sidebar-info">
-                Customize the prompt sent to the LLM when solving problem #{leetcodeNumber || 'N/A'}.
-                Use {'{PROBLEM_NUMBER}'} as a placeholder for the problem number.
-              </div>
-
-              <div className="sidebar-section">
-                <label>Quick Presets</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
-                  <button onClick={() => applyPreset('no-comments')} style={getPresetButtonStyle('no-comments')}>
-                    {activePreset === 'no-comments' && '✓ '}No Comments
-                  </button>
-                  <button onClick={() => applyPreset('minimal-comments')} style={getPresetButtonStyle('minimal-comments')}>
-                    {activePreset === 'minimal-comments' && '✓ '}Minimal Comments
-                  </button>
-                  <button onClick={() => applyPreset('concise')} style={getPresetButtonStyle('concise')}>
-                    {activePreset === 'concise' && '✓ '}Concise
-                  </button>
-                  <button onClick={() => applyPreset('detailed')} style={getPresetButtonStyle('detailed')}>
-                    {activePreset === 'detailed' && '✓ '}Detailed
-                  </button>
-                  <button onClick={() => applyPreset('optimal')} style={getPresetButtonStyle('optimal')}>
-                    {activePreset === 'optimal' && '✓ '}Optimal Solution
-                  </button>
-                  <button onClick={resetPromptToDefault} style={getPresetButtonStyle('default')}>
-                    {activePreset === 'default' && '✓ '}Default
-                  </button>
-                </div>
-              </div>
-
-              <div className="sidebar-section">
-                <label>Base Prompt (from Admin)</label>
-                <textarea
-                  className="sidebar-textarea"
-                  value={basePrompt}
-                  onChange={(e) => setBasePrompt(e.target.value)}
-                  placeholder={loadingBasePrompt ? "Loading base prompt..." : "Base prompt from admin settings..."}
-                  style={{ height: '200px', marginBottom: '1rem' }}
-                  disabled={loadingBasePrompt}
-                />
-
-                <label>Style Modifier (Preset Additions)</label>
-                <textarea
-                  className="sidebar-textarea"
-                  value={promptModifier}
-                  onChange={(e) => {
-                    setPromptModifier(e.target.value)
-                    setActivePreset(null)
-                  }}
-                  placeholder="Additional instructions from preset (e.g., 'no comments', 'detailed', etc.)..."
-                  style={{ height: '150px' }}
-                />
-                <div style={{ fontSize: '0.75rem', color: '#888', marginTop: '0.5rem' }}>
-                  These two prompts are combined and sent to the LLM
-                </div>
-              </div>
-            </div>
-            <div className="sidebar-footer">
-              <button
-                onClick={() => setSidebarOpen(false)}
-                style={{ background: '#555' }}
-              >
-                Cancel
-              </button>
-              <button onClick={solveLeetcode}>
-                Solve Problem
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+      <AppSidebar
+        sidebarOpen={sidebarOpen}
+        sidebarMode={sidebarMode}
+        setSidebarOpen={setSidebarOpen}
+        testCase={testCase}
+        setTestCase={setTestCase}
+        lastTestCaseUpdate={lastTestCaseUpdate}
+        testCaseCacheHit={testCaseCacheHit}
+        generateTestCases={generateTestCases}
+        importTestCase={importTestCase}
+        clearTestCases={clearTestCases}
+        llmPrompt={llmPrompt}
+        setLlmPrompt={setLlmPrompt}
+        applyLlmPrompt={applyLlmPrompt}
+        leetcodeNumber={leetcodeNumber}
+        basePrompt={basePrompt}
+        setBasePrompt={setBasePrompt}
+        promptModifier={promptModifier}
+        setPromptModifier={setPromptModifier}
+        activePreset={activePreset}
+        setActivePreset={setActivePreset}
+        loadingBasePrompt={loadingBasePrompt}
+        applyPreset={applyPreset}
+        resetPromptToDefault={resetPromptToDefault}
+        solveLeetcode={solveLeetcode}
+        getPresetButtonStyle={getPresetButtonStyle}
+      />
     </div>
   )
 }
