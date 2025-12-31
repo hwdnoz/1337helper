@@ -52,6 +52,7 @@ echo "================================"
 
 # Health endpoint
 test_endpoint "GET" "/health" "200" "GET /health - Health check"
+test_endpoint "GET" "/type" "200" "GET /type - Get backend type"
 
 # Code routes
 test_endpoint "GET" "/api/code" "200" "GET /api/code - Get default code"

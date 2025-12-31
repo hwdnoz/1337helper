@@ -22,6 +22,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy' });
 });
 
+// Type endpoint
+app.get('/type', (req, res) => {
+  res.json({ type: 'node' });
+});
+
 // Register routes
 app.use('/api', codeRoutes);
 app.use('/api', adminRoutes);

@@ -15,6 +15,14 @@ def test_health_endpoint(client):
     assert data['status'] == 'healthy'
 
 
+def test_type_endpoint(client):
+    """Type endpoint should return backend type"""
+    response = client.get('/type')
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data['type'] == 'python'
+
+
 # Code routes
 def test_get_code(client):
     """GET /api/code should return default code"""
