@@ -1,5 +1,5 @@
 function SolutionPromptPanel({
-  leetcodeNumber,
+  content,
   basePrompt,
   setBasePrompt,
   promptModifier,
@@ -10,7 +10,7 @@ function SolutionPromptPanel({
   applyPreset,
   resetPromptToDefault,
   solveLeetcode,
-  setSidebarOpen
+  setUi
 }) {
   const presets = [
     { id: 'no-comments', label: 'No Comments' },
@@ -25,7 +25,7 @@ function SolutionPromptPanel({
     <>
       <div className="sidebar-content">
         <div className="sidebar-info">
-          Customize the prompt sent to the LLM when solving problem #{leetcodeNumber || 'N/A'}.
+          Customize the prompt sent to the LLM when solving problem #{content.leetcodeNumber || 'N/A'}.
           Use {'{PROBLEM_NUMBER}'} as a placeholder for the problem number.
         </div>
 
@@ -69,7 +69,7 @@ function SolutionPromptPanel({
         </div>
       </div>
       <div className="sidebar-footer">
-        <button onClick={() => setSidebarOpen(false)} style={{ background: '#555' }}>
+        <button onClick={() => setUi(prev => ({ ...prev, sidebarOpen: false }))} style={{ background: '#555' }}>
           Cancel
         </button>
         <button onClick={solveLeetcode}>Solve Problem</button>

@@ -1,8 +1,7 @@
 function TestCasePanel({
-  testCase,
-  setTestCase,
-  lastTestCaseUpdate,
-  testCaseCacheHit,
+  content,
+  setContent,
+  cacheInfo,
   generateTestCases,
   importTestCase,
   clearTestCases
@@ -15,17 +14,17 @@ function TestCasePanel({
         </div>
         <div className="sidebar-section">
           <label>Test Cases</label>
-          {lastTestCaseUpdate && (
-            <div className={`cache-indicator ${testCaseCacheHit ? 'hit' : 'miss'}`}>
-              {testCaseCacheHit && <span className="cache-lightning">⚡</span>}
-              Last updated: {lastTestCaseUpdate.toLocaleTimeString()}
-              {testCaseCacheHit && <span style={{ fontWeight: 'bold' }}>(from cache)</span>}
+          {cacheInfo.testCaseLastUpdate && (
+            <div className={`cache-indicator ${cacheInfo.testCaseCacheHit ? 'hit' : 'miss'}`}>
+              {cacheInfo.testCaseCacheHit && <span className="cache-lightning">⚡</span>}
+              Last updated: {cacheInfo.testCaseLastUpdate.toLocaleTimeString()}
+              {cacheInfo.testCaseCacheHit && <span style={{ fontWeight: 'bold' }}>(from cache)</span>}
             </div>
           )}
           <textarea
             className="sidebar-textarea"
-            value={testCase}
-            onChange={e => setTestCase(e.target.value)}
+            value={content.testCase}
+            onChange={e => setContent(prev => ({ ...prev, testCase: e.target.value }))}
             placeholder="Enter test cases or generate them..."
             style={{ minHeight: '400px' }}
           />

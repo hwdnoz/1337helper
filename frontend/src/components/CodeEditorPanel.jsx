@@ -4,33 +4,27 @@ import { vim } from '@replit/codemirror-vim'
 import CacheIndicator from './CacheIndicator'
 
 function CodeEditorPanel({
-  code,
-  setCode,
-  vimEnabled,
-  setVimEnabled,
+  content,
+  setContent,
+  ui,
+  setUi,
+  cacheInfo,
+  setCacheInfo,
   runCode,
   importTestCase,
-  clearTestCases,
-  lastUpdate,
-  cacheHit,
-  semanticCacheHit,
-  similarityScore,
-  cachedPrompt,
-  currentPrompt,
-  showPromptDiff,
-  setShowPromptDiff
+  clearTestCases
 }) {
   return (
     <div style={{ flex: '2', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
         <button
-          onClick={() => setVimEnabled(!vimEnabled)}
+          onClick={() => setUi(prev => ({ ...prev, vimEnabled: !prev.vimEnabled }))}
           style={{
-            background: vimEnabled ? '#0e639c' : '#555',
-            opacity: vimEnabled ? 1 : 0.6
+            background: ui.vimEnabled ? '#0e639c' : '#555',
+            opacity: ui.vimEnabled ? 1 : 0.6
           }}
         >
-          {vimEnabled ? '✓ ' : ''}Vim
+          {ui.vimEnabled ? '✓ ' : ''}Vim
         </button>
         <button onClick={runCode}>Run</button>
         <button onClick={importTestCase}>Import Test Cases</button>
@@ -38,21 +32,17 @@ function CodeEditorPanel({
       </div>
 
       <CacheIndicator
-        lastUpdate={lastUpdate}
-        cacheHit={cacheHit}
-        semanticCacheHit={semanticCacheHit}
-        similarityScore={similarityScore}
-        cachedPrompt={cachedPrompt}
-        currentPrompt={currentPrompt}
-        showPromptDiff={showPromptDiff}
-        setShowPromptDiff={setShowPromptDiff}
+        cacheInfo={cacheInfo}
+        setCacheInfo={setCacheInfo}
+        ui={ui}
+        setUi={setUi}
       />
 
       <div style={{ flex: 1, minHeight: 0 }}>
         <CodeMirror
-          value={code}
-          onChange={setCode}
-          extensions={vimEnabled ? [python(), vim()] : [python()]}
+          value={content.code}
+          onChange={(val) => setContent(prev => ({ ...prev, code: val }))}
+          extensions={ui.vimEnabled ? [python(), vim()] : [python()]}
           theme="dark"
           basicSetup={{
             lineNumbers: true,

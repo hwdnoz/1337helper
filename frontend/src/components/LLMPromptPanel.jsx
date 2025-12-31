@@ -1,6 +1,6 @@
 function LLMPromptPanel({
-  llmPrompt,
-  setLlmPrompt,
+  content,
+  setContent,
   applyLlmPrompt
 }) {
   return (
@@ -13,8 +13,8 @@ function LLMPromptPanel({
           <label>Modification Instructions</label>
           <textarea
             className="sidebar-textarea"
-            value={llmPrompt}
-            onChange={e => setLlmPrompt(e.target.value)}
+            value={content.llmPrompt}
+            onChange={e => setContent(prev => ({ ...prev, llmPrompt: e.target.value }))}
             placeholder="E.g., 'Add error handling', 'Optimize for performance', 'Add type hints'..."
             style={{ minHeight: '400px' }}
           />

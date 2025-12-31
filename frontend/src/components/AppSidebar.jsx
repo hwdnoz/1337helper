@@ -3,23 +3,15 @@ import LLMPromptPanel from './LLMPromptPanel'
 import SolutionPromptPanel from './SolutionPromptPanel'
 
 function AppSidebar({
-  sidebarOpen,
-  sidebarMode,
-  setSidebarOpen,
-  // Test Case Panel props
-  testCase,
-  setTestCase,
-  lastTestCaseUpdate,
-  testCaseCacheHit,
+  ui,
+  setUi,
+  content,
+  setContent,
+  cacheInfo,
   generateTestCases,
   importTestCase,
   clearTestCases,
-  // LLM Prompt Panel props
-  llmPrompt,
-  setLlmPrompt,
   applyLlmPrompt,
-  // Solution Prompt Panel props
-  leetcodeNumber,
   basePrompt,
   setBasePrompt,
   promptModifier,
@@ -29,58 +21,56 @@ function AppSidebar({
   loadingBasePrompt,
   applyPreset,
   resetPromptToDefault,
-  solveLeetcode
+  solveLeetcode,
+  startJob
 }) {
   return (
     <>
-      {/* Unified Sidebar */}
-      {sidebarOpen && (
+      {ui.sidebarOpen && (
         <div
-          className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
-          onClick={() => setSidebarOpen(false)}
+          className="sidebar-overlay open"
+          onClick={() => setUi(prev => ({ ...prev, sidebarOpen: false }))}
         />
       )}
-      <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+      <div className={`sidebar ${ui.sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
           <h2>
-            {sidebarMode === 'test-case' && 'Test Cases'}
-            {sidebarMode === 'llm-prompt' && 'LLM Prompt'}
-            {sidebarMode === 'solution-prompt' && 'Solution Prompt Manager'}
+            {ui.sidebarMode === 'test-case' && 'Test Cases'}
+            {ui.sidebarMode === 'llm-prompt' && 'LLM Prompt'}
+            {ui.sidebarMode === 'solution-prompt' && 'Solution Prompt Manager'}
           </h2>
           <button
             className="sidebar-close"
-            onClick={() => setSidebarOpen(false)}
+            onClick={() => setUi(prev => ({ ...prev, sidebarOpen: false }))}
           >
             ×
           </button>
         </div>
 
-        {/* Test Case Panel */}
-        {sidebarMode === 'test-case' && (
+        {ui.sidebarMode === 'test-case' && (
           <TestCasePanel
-            testCase={testCase}
-            setTestCase={setTestCase}
-            lastTestCaseUpdate={lastTestCaseUpdate}
-            testCaseCacheHit={testCaseCacheHit}
+            content={content}
+            setContent={setContent}
+            cacheInfo={cacheInfo}
             generateTestCases={generateTestCases}
             importTestCase={importTestCase}
             clearTestCases={clearTestCases}
+            startJob={startJob}
           />
         )}
 
-        {/* LLM Prompt Panel */}
-        {sidebarMode === 'llm-prompt' && (
+        {ui.sidebarMode === 'llm-prompt' && (
           <LLMPromptPanel
-            llmPrompt={llmPrompt}
-            setLlmPrompt={setLlmPrompt}
+            content={content}
+            setContent={setContent}
             applyLlmPrompt={applyLlmPrompt}
+            startJob={startJob}
           />
         )}
 
-        {/* Solution Prompt Panel */}
-        {sidebarMode === 'solution-prompt' && (
+        {ui.sidebarMode === 'solution-prompt' && (
           <SolutionPromptPanel
-            leetcodeNumber={leetcodeNumber}
+            content={content}
             basePrompt={basePrompt}
             setBasePrompt={setBasePrompt}
             promptModifier={promptModifier}
@@ -91,7 +81,8 @@ function AppSidebar({
             applyPreset={applyPreset}
             resetPromptToDefault={resetPromptToDefault}
             solveLeetcode={solveLeetcode}
-            setSidebarOpen={setSidebarOpen}
+            setUi={setUi}
+            startJob={startJob}
           />
         )}
       </div>

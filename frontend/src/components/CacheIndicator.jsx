@@ -1,34 +1,25 @@
 import PromptDiffModal from './PromptDiffModal'
 
-function CacheIndicator({
-  lastUpdate,
-  cacheHit,
-  semanticCacheHit,
-  similarityScore,
-  cachedPrompt,
-  currentPrompt,
-  showPromptDiff,
-  setShowPromptDiff
-}) {
-  if (!lastUpdate) return null
+function CacheIndicator({ cacheInfo, setCacheInfo, ui, setUi }) {
+  if (!cacheInfo.lastUpdate) return null
 
   return (
-    <div className={`cache-indicator ${cacheHit ? 'hit' : 'miss'}`}>
-      {cacheHit && <span className="cache-lightning">⚡</span>}
-      Last updated: {lastUpdate.toLocaleTimeString()}
-      {cacheHit && !semanticCacheHit && <span style={{ fontWeight: 'bold' }}>(from cache)</span>}
-      {semanticCacheHit && (
+    <div className={`cache-indicator ${cacheInfo.cacheHit ? 'hit' : 'miss'}`}>
+      {cacheInfo.cacheHit && <span className="cache-lightning">⚡</span>}
+      Last updated: {cacheInfo.lastUpdate.toLocaleTimeString()}
+      {cacheInfo.cacheHit && !cacheInfo.semanticCacheHit && <span style={{ fontWeight: 'bold' }}>(from cache)</span>}
+      {cacheInfo.semanticCacheHit && (
         <span
           className="semantic-cache-link"
-          onClick={() => setShowPromptDiff(!showPromptDiff)}
-          title={cachedPrompt && currentPrompt ? 'Click to see prompt differences' : ''}
+          onClick={() => setUi(prev => ({ ...prev, showPromptDiff: !prev.showPromptDiff }))}
+          title={cacheInfo.cachedPrompt && cacheInfo.currentPrompt ? 'Click to see prompt differences' : ''}
         >
-          (semantic cache {similarityScore ? `${(similarityScore * 100).toFixed(0)}%` : ''})
-          {cachedPrompt && currentPrompt && showPromptDiff && (
+          (semantic cache {cacheInfo.similarityScore ? `${(cacheInfo.similarityScore * 100).toFixed(0)}%` : ''})
+          {cacheInfo.cachedPrompt && cacheInfo.currentPrompt && ui.showPromptDiff && (
             <PromptDiffModal
-              cachedPrompt={cachedPrompt}
-              currentPrompt={currentPrompt}
-              onClose={() => setShowPromptDiff(false)}
+              cachedPrompt={cacheInfo.cachedPrompt}
+              currentPrompt={cacheInfo.currentPrompt}
+              onClose={() => setUi(prev => ({ ...prev, showPromptDiff: false }))}
             />
           )}
         </span>
