@@ -2,6 +2,7 @@
 
 .DEFAULT_GOAL := help
 
+BACKEND_TYPE ?= python
 BACKEND_SCALE ?= 1
 
 help:
@@ -21,10 +22,12 @@ help:
 	@echo "  make docker-logs-frontend - Follow frontend logs"
 	@echo ""
 	@echo "Docker Compose (Recommended):"
-	@echo "  make compose-up                   - Start all services (RabbitMQ, Redis, Backend, Celery, Frontend, Proxy)"
-	@echo "  make compose-up BACKEND_SCALE=5   - Start with 5 backend instances + nginx load balancer"
-	@echo "  make compose-down                 - Stop and remove all containers"
-	@echo "  make compose-reload               - Full rebuild: down, prune, up with 5 backends"
+	@echo "  make compose-up                          - Start all services (Python backend)"
+	@echo "  make compose-up BACKEND_TYPE=node        - Start with Node.js backend"
+	@echo "  make compose-up BACKEND_SCALE=5          - Start with 5 Python backend instances"
+	@echo "  make compose-up BACKEND_TYPE=node BACKEND_SCALE=3  - 3 Node.js instances"
+	@echo "  make compose-down                        - Stop and remove all containers"
+	@echo "  make compose-reload                      - Full rebuild: down, prune, up"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make docker-remove-containers - Remove Docker containers"
@@ -33,7 +36,7 @@ help:
 local-start:
 	@lsof -ti :3102 | xargs kill 2>/dev/null || true
 	@lsof -ti :3101 | xargs kill 2>/dev/null || true
-	@bash -c "cd /Users/howard/Code/1337helper && source venv/bin/activate && python app.py 2>&1 &"
+	@bash -c "cd /Users/howard/Code/1337helper/backend-python && source ../venv/bin/activate && python app.py 2>&1 &"
 	@bash -c "cd /Users/howard/Code/1337helper/frontend && npm run dev 2>&1 &"
 
 local-stop:
@@ -74,7 +77,7 @@ docker-remove-images:
 	@docker rmi -f 1337helper-frontend 2>/dev/null || true
 
 compose-up:
-	@docker compose up --scale backend=$(BACKEND_SCALE)
+	BACKEND_TYPE=$(BACKEND_TYPE) docker compose up --scale backend=$(BACKEND_SCALE); \
 
 compose-down:
 	@docker compose down
@@ -98,7 +101,7 @@ compose-rebuild-service:
 
 test:
 	@echo "Running pytest unit tests..."
-	@cd backend && source ../venv/bin/activate && pytest tests/test_api.py -v
+	@cd backend-python && source ../venv/bin/activate && pytest tests/test_api.py -v
 	@echo ""
 	@echo "Running integration tests..."
-	@./backend/tests/test_api.sh http://localhost:5102
+	@./backend-python/tests/test_api.sh http://localhost:5102
