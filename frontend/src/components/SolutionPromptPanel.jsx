@@ -10,9 +10,17 @@ function SolutionPromptPanel({
   applyPreset,
   resetPromptToDefault,
   solveLeetcode,
-  getPresetButtonStyle,
   setSidebarOpen
 }) {
+  const presets = [
+    { id: 'no-comments', label: 'No Comments' },
+    { id: 'minimal-comments', label: 'Minimal Comments' },
+    { id: 'concise', label: 'Concise' },
+    { id: 'detailed', label: 'Detailed' },
+    { id: 'optimal', label: 'Optimal Solution' },
+    { id: 'default', label: 'Default', onClick: resetPromptToDefault }
+  ]
+
   return (
     <>
       <div className="sidebar-content">
@@ -23,25 +31,16 @@ function SolutionPromptPanel({
 
         <div className="sidebar-section">
           <label>Quick Presets</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
-            <button onClick={() => applyPreset('no-comments')} style={getPresetButtonStyle('no-comments')}>
-              {activePreset === 'no-comments' && '✓ '}No Comments
-            </button>
-            <button onClick={() => applyPreset('minimal-comments')} style={getPresetButtonStyle('minimal-comments')}>
-              {activePreset === 'minimal-comments' && '✓ '}Minimal Comments
-            </button>
-            <button onClick={() => applyPreset('concise')} style={getPresetButtonStyle('concise')}>
-              {activePreset === 'concise' && '✓ '}Concise
-            </button>
-            <button onClick={() => applyPreset('detailed')} style={getPresetButtonStyle('detailed')}>
-              {activePreset === 'detailed' && '✓ '}Detailed
-            </button>
-            <button onClick={() => applyPreset('optimal')} style={getPresetButtonStyle('optimal')}>
-              {activePreset === 'optimal' && '✓ '}Optimal Solution
-            </button>
-            <button onClick={resetPromptToDefault} style={getPresetButtonStyle('default')}>
-              {activePreset === 'default' && '✓ '}Default
-            </button>
+          <div className="preset-grid">
+            {presets.map(({ id, label, onClick }) => (
+              <button
+                key={id}
+                onClick={() => onClick ? onClick() : applyPreset(id)}
+                className={`preset-button ${activePreset === id ? 'active' : ''}`}
+              >
+                {activePreset === id && '✓ '}{label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -60,10 +59,7 @@ function SolutionPromptPanel({
           <textarea
             className="sidebar-textarea"
             value={promptModifier}
-            onChange={(e) => {
-              setPromptModifier(e.target.value)
-              setActivePreset(null)
-            }}
+            onChange={(e) => { setPromptModifier(e.target.value); setActivePreset(null); }}
             placeholder="Additional instructions from preset (e.g., 'no comments', 'detailed', etc.)..."
             style={{ height: '150px' }}
           />
@@ -73,15 +69,10 @@ function SolutionPromptPanel({
         </div>
       </div>
       <div className="sidebar-footer">
-        <button
-          onClick={() => setSidebarOpen(false)}
-          style={{ background: '#555' }}
-        >
+        <button onClick={() => setSidebarOpen(false)} style={{ background: '#555' }}>
           Cancel
         </button>
-        <button onClick={solveLeetcode}>
-          Solve Problem
-        </button>
+        <button onClick={solveLeetcode}>Solve Problem</button>
       </div>
     </>
   )
