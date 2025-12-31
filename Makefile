@@ -1,4 +1,4 @@
-.PHONY: help local-start local-stop docker-frontend docker-backend docker-start docker-stop docker-logs-backend docker-logs-frontend docker-remove-containers docker-remove-images compose-up compose-down
+.PHONY: help local-start local-stop docker-frontend docker-backend docker-start docker-stop docker-logs-backend docker-logs-frontend docker-remove-containers docker-remove-images compose-up compose-down test
 
 .DEFAULT_GOAL := help
 
@@ -10,6 +10,7 @@ help:
 	@echo "Local Development:"
 	@echo "  make local-start          - Start backend and frontend locally"
 	@echo "  make local-stop           - Stop local processes"
+	@echo "  make test                 - Run integration tests against API"
 	@echo ""
 	@echo "Docker (Individual Containers):"
 	@echo "  make docker-backend       - Build and start backend container"
@@ -94,3 +95,10 @@ compose-rebuild-service:
 # 	@docker system prune -a
 # docker-remove-volumes:
 # 	@docker volume prune -f
+
+test:
+	@echo "Running pytest unit tests..."
+	@cd backend && source ../venv/bin/activate && pytest tests/test_api.py -v
+	@echo ""
+	@echo "Running integration tests..."
+	@./backend/tests/test_api.sh http://localhost:5102
