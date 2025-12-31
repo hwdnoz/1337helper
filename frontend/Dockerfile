@@ -14,8 +14,11 @@ COPY . .
 # Use Docker environment config
 COPY .env.docker .env
 
+# Build app (incl. minification and compression)
+RUN npm run build
+
 # need port
 EXPOSE 3101
 
-# run dev server
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# run production server (incl. brotli/gzip support)
+CMD ["npm", "run", "serve"]
