@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import AdminControls from './components/AdminControls'
-import SummaryStats from './components/SummaryStats'
-import PerformanceChart from './components/PerformanceChart'
-import CacheChart from './components/CacheChart'
+import AdminControls from './components/admin/AdminControls'
+import SummaryStats from './components/admin/SummaryStats'
+import PerformanceChart from './components/admin/PerformanceChart'
+import CacheChart from './components/admin/CacheChart'
+import AdminHeader from './components/admin/AdminHeader'
+import RecentCallsList from './components/admin/RecentCallsList'
+import CallDetailsModal from './components/admin/CallDetailsModal'
+import PromptEditorModal from './components/admin/PromptEditorModal'
 import './App.css'
 import { API_URL } from './config'
 
@@ -12,33 +16,32 @@ const AVAILABLE_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite']
 function AdminPage({ onLogout }) {
   const navigate = useNavigate()
 
-  const handleLogout = () => {
-    onLogout()
-    navigate('/login')
-  }
+  // Data state (metrics, stats, prompts)
+  const [data, setData] = useState({
+    metrics: [],
+    summary: null,
+    cacheStats: null,
+    prompts: []
+  })
 
-  // Core data
-  const [metrics, setMetrics] = useState([])
-  const [summary, setSummary] = useState(null)
-  const [cacheStats, setCacheStats] = useState(null)
-  const [loadingMetrics, setLoadingMetrics] = useState(true)
+  // Settings state (cache, model configuration)
+  const [settings, setSettings] = useState({
+    cacheEnabled: true,
+    modelAwareCache: true,
+    semanticCacheEnabled: false,
+    currentModel: 'gemini-2.5-flash'
+  })
 
-  // Settings state
-  const [cacheEnabled, setCacheEnabled] = useState(true)
-  const [modelAwareCache, setModelAwareCache] = useState(true)
-  const [semanticCacheEnabled, setSemanticCacheEnabled] = useState(false)
-  const [currentModel, setCurrentModel] = useState('gemini-2.5-flash')
-
-  // UI state
-  const [selectedCall, setSelectedCall] = useState(null)
-  const [loadingCall, setLoadingCall] = useState(false)
-  const [showDbDropdown, setShowDbDropdown] = useState(false)
-
-  // Prompt management state
-  const [prompts, setPrompts] = useState([])
-  const [selectedPrompt, setSelectedPrompt] = useState(null)
-  const [editedPromptContent, setEditedPromptContent] = useState('')
-  const [savingPrompt, setSavingPrompt] = useState(false)
+  // UI state (modals, dropdowns, loading)
+  const [ui, setUi] = useState({
+    selectedCall: null,
+    loadingCall: false,
+    loadingMetrics: true,
+    showDbDropdown: false,
+    selectedPrompt: null,
+    editedPromptContent: '',
+    savingPrompt: false
+  })
 
   useEffect(() => {
     loadMetrics()
@@ -51,7 +54,7 @@ function AdminPage({ onLogout }) {
   }, [])
 
   const loadMetrics = async () => {
-    setLoadingMetrics(true)
+    setUi(prev => ({ ...prev, loadingMetrics: true }))
     try {
       const [metricsRes, summaryRes] = await Promise.all([
         fetch(`${API_URL}/api/observability/metrics?limit=1000`),
@@ -62,45 +65,45 @@ function AdminPage({ onLogout }) {
       const summaryData = await summaryRes.json()
 
       if (metricsData.success) {
-        setMetrics(metricsData.metrics)
+        setData(prev => ({ ...prev, metrics: metricsData.metrics }))
       }
       if (summaryData.success) {
-        setSummary(summaryData.summary)
+        setData(prev => ({ ...prev, summary: summaryData.summary }))
       }
     } catch (error) {
       console.error('Failed to load metrics:', error)
     } finally {
-      setLoadingMetrics(false)
+      setUi(prev => ({ ...prev, loadingMetrics: false }))
     }
   }
 
   const loadCallDetails = async (callId) => {
-    setLoadingCall(true)
+    setUi(prev => ({ ...prev, loadingCall: true }))
     try {
       const res = await fetch(`${API_URL}/api/observability/call/${callId}`)
-      const data = await res.json()
+      const responseData = await res.json()
 
-      if (data.success) {
-        setSelectedCall(data.call)
+      if (responseData.success) {
+        setUi(prev => ({ ...prev, selectedCall: responseData.call }))
       }
     } catch (error) {
       console.error('Failed to load call details:', error)
     } finally {
-      setLoadingCall(false)
+      setUi(prev => ({ ...prev, loadingCall: false }))
     }
   }
 
-  const closeModal = () => {
-    setSelectedCall(null)
+  const closeCallModal = () => {
+    setUi(prev => ({ ...prev, selectedCall: null }))
   }
 
   const loadCacheStats = async () => {
     try {
       const res = await fetch(`${API_URL}/api/cache/stats`)
-      const data = await res.json()
+      const responseData = await res.json()
 
-      if (data.success) {
-        setCacheStats(data.stats)
+      if (responseData.success) {
+        setData(prev => ({ ...prev, cacheStats: responseData.stats }))
       }
     } catch (error) {
       console.error('Failed to load cache stats:', error)
@@ -144,10 +147,10 @@ function AdminPage({ onLogout }) {
   const loadCacheEnabled = async () => {
     try {
       const res = await fetch(`${API_URL}/api/cache/enabled`)
-      const data = await res.json()
+      const responseData = await res.json()
 
-      if (data.success) {
-        setCacheEnabled(data.enabled)
+      if (responseData.success) {
+        setSettings(prev => ({ ...prev, cacheEnabled: responseData.enabled }))
       }
     } catch (error) {
       console.error('Failed to load cache enabled status:', error)
@@ -159,12 +162,12 @@ function AdminPage({ onLogout }) {
       const res = await fetch(`${API_URL}/api/cache/enabled`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: !cacheEnabled })
+        body: JSON.stringify({ enabled: !settings.cacheEnabled })
       })
-      const data = await res.json()
+      const responseData = await res.json()
 
-      if (data.success) {
-        setCacheEnabled(data.enabled)
+      if (responseData.success) {
+        setSettings(prev => ({ ...prev, cacheEnabled: responseData.enabled }))
         loadCacheStats()
       }
     } catch (error) {
@@ -176,10 +179,10 @@ function AdminPage({ onLogout }) {
   const loadModelAwareCache = async () => {
     try {
       const res = await fetch(`${API_URL}/api/cache/model-aware`)
-      const data = await res.json()
+      const responseData = await res.json()
 
-      if (data.success) {
-        setModelAwareCache(data.model_aware)
+      if (responseData.success) {
+        setSettings(prev => ({ ...prev, modelAwareCache: responseData.model_aware }))
       }
     } catch (error) {
       console.error('Failed to load model-aware cache status:', error)
@@ -191,12 +194,12 @@ function AdminPage({ onLogout }) {
       const res = await fetch(`${API_URL}/api/cache/model-aware`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model_aware: !modelAwareCache })
+        body: JSON.stringify({ model_aware: !settings.modelAwareCache })
       })
-      const data = await res.json()
+      const responseData = await res.json()
 
-      if (data.success) {
-        setModelAwareCache(data.model_aware)
+      if (responseData.success) {
+        setSettings(prev => ({ ...prev, modelAwareCache: responseData.model_aware }))
         loadCacheStats()
       }
     } catch (error) {
@@ -208,10 +211,10 @@ function AdminPage({ onLogout }) {
   const loadSemanticCacheEnabled = async () => {
     try {
       const res = await fetch(`${API_URL}/api/cache/semantic-enabled`)
-      const data = await res.json()
+      const responseData = await res.json()
 
-      if (data.success) {
-        setSemanticCacheEnabled(data.semantic_enabled)
+      if (responseData.success) {
+        setSettings(prev => ({ ...prev, semanticCacheEnabled: responseData.semantic_enabled }))
       }
     } catch (error) {
       console.error('Failed to load semantic cache enabled status:', error)
@@ -223,12 +226,12 @@ function AdminPage({ onLogout }) {
       const res = await fetch(`${API_URL}/api/cache/semantic-enabled`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ semantic_enabled: !semanticCacheEnabled })
+        body: JSON.stringify({ semantic_enabled: !settings.semanticCacheEnabled })
       })
-      const data = await res.json()
+      const responseData = await res.json()
 
-      if (data.success) {
-        setSemanticCacheEnabled(data.semantic_enabled)
+      if (responseData.success) {
+        setSettings(prev => ({ ...prev, semanticCacheEnabled: responseData.semantic_enabled }))
         loadCacheStats()
       }
     } catch (error) {
@@ -240,10 +243,10 @@ function AdminPage({ onLogout }) {
   const loadCurrentModel = async () => {
     try {
       const res = await fetch(`${API_URL}/api/current-model`)
-      const data = await res.json()
+      const responseData = await res.json()
 
-      if (data.success) {
-        setCurrentModel(data.model)
+      if (responseData.success) {
+        setSettings(prev => ({ ...prev, currentModel: responseData.model }))
       }
     } catch (error) {
       console.error('Failed to load current model:', error)
@@ -257,11 +260,11 @@ function AdminPage({ onLogout }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model })
       })
-      const data = await res.json()
+      const responseData = await res.json()
 
-      if (data.success) {
-        setCurrentModel(data.model)
-        alert(`Model changed to ${data.model}`)
+      if (responseData.success) {
+        setSettings(prev => ({ ...prev, currentModel: responseData.model }))
+        alert(`Model changed to ${responseData.model}`)
       }
     } catch (error) {
       console.error('Failed to change model:', error)
@@ -272,9 +275,9 @@ function AdminPage({ onLogout }) {
   const loadPrompts = async () => {
     try {
       const res = await fetch(`${API_URL}/api/prompts`)
-      const data = await res.json()
-      if (data.success) {
-        setPrompts(data.prompts)
+      const responseData = await res.json()
+      if (responseData.success) {
+        setData(prev => ({ ...prev, prompts: responseData.prompts }))
       }
     } catch (error) {
       console.error('Failed to load prompts:', error)
@@ -284,10 +287,13 @@ function AdminPage({ onLogout }) {
   const openPromptEditor = async (promptName) => {
     try {
       const res = await fetch(`${API_URL}/api/prompts/${promptName}`)
-      const data = await res.json()
-      if (data.success) {
-        setSelectedPrompt({ name: promptName, ...data.prompt })
-        setEditedPromptContent(data.prompt.content)
+      const responseData = await res.json()
+      if (responseData.success) {
+        setUi(prev => ({
+          ...prev,
+          selectedPrompt: { name: promptName, ...responseData.prompt },
+          editedPromptContent: responseData.prompt.content
+        }))
       }
     } catch (error) {
       console.error('Failed to load prompt:', error)
@@ -295,41 +301,47 @@ function AdminPage({ onLogout }) {
   }
 
   const savePrompt = async () => {
-    if (!selectedPrompt) return
-    setSavingPrompt(true)
+    if (!ui.selectedPrompt) return
+    setUi(prev => ({ ...prev, savingPrompt: true }))
     try {
-      const res = await fetch(`${API_URL}/api/prompts/${selectedPrompt.name}`, {
+      const res = await fetch(`${API_URL}/api/prompts/${ui.selectedPrompt.name}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: editedPromptContent })
+        body: JSON.stringify({ content: ui.editedPromptContent })
       })
-      const data = await res.json()
-      if (data.success) {
+      const responseData = await res.json()
+      if (responseData.success) {
         alert('Prompt saved!')
-        setSelectedPrompt({ ...selectedPrompt, ...data.prompt })
+        setUi(prev => ({
+          ...prev,
+          selectedPrompt: { ...ui.selectedPrompt, ...responseData.prompt }
+        }))
         loadPrompts()
       } else {
-        alert('Failed to save: ' + data.error)
+        alert('Failed to save: ' + responseData.error)
       }
     } catch (error) {
       console.error('Failed to save prompt:', error)
       alert('Failed to save prompt')
     } finally {
-      setSavingPrompt(false)
+      setUi(prev => ({ ...prev, savingPrompt: false }))
     }
   }
 
   const resetPrompt = async () => {
-    if (!selectedPrompt || !confirm('Reset to default?')) return
+    if (!ui.selectedPrompt || !confirm('Reset to default?')) return
     try {
-      const res = await fetch(`${API_URL}/api/prompts/${selectedPrompt.name}/reset`, {
+      const res = await fetch(`${API_URL}/api/prompts/${ui.selectedPrompt.name}/reset`, {
         method: 'POST'
       })
-      const data = await res.json()
-      if (data.success) {
+      const responseData = await res.json()
+      if (responseData.success) {
         alert('Reset to default!')
-        setSelectedPrompt({ name: selectedPrompt.name, ...data.prompt })
-        setEditedPromptContent(data.prompt.content)
+        setUi(prev => ({
+          ...prev,
+          selectedPrompt: { name: ui.selectedPrompt.name, ...responseData.prompt },
+          editedPromptContent: responseData.prompt.content
+        }))
         loadPrompts()
       }
     } catch (error) {
@@ -338,60 +350,26 @@ function AdminPage({ onLogout }) {
   }
 
   const closePromptEditor = () => {
-    setSelectedPrompt(null)
-    setEditedPromptContent('')
+    setUi(prev => ({ ...prev, selectedPrompt: null, editedPromptContent: '' }))
   }
 
   return (
     <div className="app">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h1 style={{ margin: 0 }}>Admin Dashboard</h1>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <div style={{ position: 'relative' }}>
-            <button onClick={() => setShowDbDropdown(!showDbDropdown)}>
-              View Database ▼
-            </button>
-            {showDbDropdown && (
-              <div className="dropdown-menu">
-                <div
-                  className="dropdown-item"
-                  onClick={() => {
-                    navigate('/admin/metrics-database')
-                    setShowDbDropdown(false)
-                  }}
-                >
-                  Metrics Database
-                </div>
-                <div
-                  className="dropdown-item"
-                  onClick={() => {
-                    navigate('/admin/cache-database')
-                    setShowDbDropdown(false)
-                  }}
-                >
-                  Cache Database
-                </div>
-              </div>
-            )}
-          </div>
-          <button onClick={loadMetrics}>Refresh</button>
-          <button onClick={() => navigate('/')} style={{ background: '#555' }}>
-            Back to Code Runner
-          </button>
-          <button onClick={handleLogout} style={{ background: '#d32f2f' }}>
-            Logout
-          </button>
-        </div>
-      </div>
+      <AdminHeader
+        showDbDropdown={ui.showDbDropdown}
+        setShowDbDropdown={(val) => setUi(prev => ({ ...prev, showDbDropdown: val }))}
+        onRefresh={loadMetrics}
+        navigate={navigate}
+        onLogout={onLogout}
+      />
 
-      {/* Admin Controls Section */}
       <AdminControls
-        currentModel={currentModel}
+        currentModel={settings.currentModel}
         availableModels={AVAILABLE_MODELS}
-        cacheEnabled={cacheEnabled}
-        modelAwareCache={modelAwareCache}
-        semanticCacheEnabled={semanticCacheEnabled}
-        prompts={prompts}
+        cacheEnabled={settings.cacheEnabled}
+        modelAwareCache={settings.modelAwareCache}
+        semanticCacheEnabled={settings.semanticCacheEnabled}
+        prompts={data.prompts}
         onModelChange={changeModel}
         onToggleCache={toggleCache}
         onToggleModelAwareCache={toggleModelAwareCache}
@@ -399,176 +377,47 @@ function AdminPage({ onLogout }) {
         onPromptSelect={openPromptEditor}
       />
 
-      {loadingMetrics ? (
+      {ui.loadingMetrics ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
           <div className="spinner"></div>
         </div>
       ) : (
         <div className="admin-container">
-          {/* Summary Stats, Cache Stats, and Operation Breakdown */}
           <SummaryStats
-            summary={summary}
-            cacheStats={cacheStats}
-            cacheEnabled={cacheEnabled}
+            summary={data.summary}
+            cacheStats={data.cacheStats}
+            cacheEnabled={settings.cacheEnabled}
             onToggleCache={toggleCache}
             onClearExpiredCache={clearExpiredCache}
             onClearCache={clearCache}
           />
 
-          {/* Performance Chart */}
-          <PerformanceChart metrics={metrics} />
+          <PerformanceChart metrics={data.metrics} />
 
-          {/* Cache Hit/Miss Chart */}
-          <CacheChart metrics={metrics} />
+          <CacheChart metrics={data.metrics} />
 
-          {/* Recent Calls */}
-          <div className="admin-section">
-            <h2>Recent LLM Calls ({metrics.length})</h2>
-            <div className="metrics-list">
-              {metrics.map((metric, idx) => (
-                <div
-                  key={idx}
-                  className="metric-card clickable"
-                  onClick={() => loadCallDetails(metric.id)}
-                >
-                  <div className="metric-header">
-                    <span className={`metric-status ${metric.success ? 'success' : 'error'}`}>
-                      {metric.success ? '✓' : '✗'}
-                    </span>
-                    <span className="metric-operation">{metric.operation_type}</span>
-                    <span className="metric-time">{new Date(metric.timestamp).toLocaleTimeString()}</span>
-                  </div>
-                  <div className="metric-details">
-                    <div className="metric-detail">
-                      <span className="detail-label">Tokens:</span>
-                      <span className="detail-value">
-                        {metric.tokens_sent} sent → {metric.tokens_received} received ({metric.total_tokens} total)
-                      </span>
-                    </div>
-                    <div className="metric-detail">
-                      <span className="detail-label">Latency:</span>
-                      <span className="detail-value">{(metric.latency_ms / 1000).toFixed(2)}s</span>
-                    </div>
-                    {metric.error && (
-                      <div className="metric-detail error">
-                        <span className="detail-label">Error:</span>
-                        <span className="detail-value">{metric.error}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <RecentCallsList metrics={data.metrics} onCallClick={loadCallDetails} />
         </div>
       )}
 
-      {/* Modal for call details */}
-      {selectedCall && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>LLM Call Details</h2>
-              <button className="modal-close" onClick={closeModal}>×</button>
-            </div>
-
-            {loadingCall ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
-                <div className="spinner"></div>
-              </div>
-            ) : (
-              <div className="modal-body">
-                <div className="modal-section">
-                  <h3>Metadata</h3>
-                  <div className="metadata-grid">
-                    <div><strong>Operation:</strong> {selectedCall.operation_type}</div>
-                    <div><strong>Model:</strong> {selectedCall.metadata?.model || 'N/A'}</div>
-                    <div><strong>Timestamp:</strong> {new Date(selectedCall.timestamp).toLocaleString()}</div>
-                    <div><strong>Status:</strong> {selectedCall.success ? '✓ Success' : '✗ Failed'}</div>
-                    <div><strong>Latency:</strong> {(selectedCall.latency_ms / 1000).toFixed(2)}s</div>
-                    <div><strong>Tokens Sent:</strong> {selectedCall.tokens_sent}</div>
-                    <div><strong>Tokens Received:</strong> {selectedCall.tokens_received}</div>
-                  </div>
-                </div>
-
-                <div className="modal-section">
-                  <h3>Prompt</h3>
-                  <pre className="code-block">{selectedCall.prompt}</pre>
-                </div>
-
-                <div className="modal-section">
-                  <h3>Response</h3>
-                  <pre className="code-block">{selectedCall.response_text}</pre>
-                </div>
-
-                {selectedCall.error && (
-                  <div className="modal-section error">
-                    <h3>Error</h3>
-                    <pre className="code-block">{selectedCall.error}</pre>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+      {ui.selectedCall && (
+        <CallDetailsModal
+          call={ui.selectedCall}
+          loading={ui.loadingCall}
+          onClose={closeCallModal}
+        />
       )}
 
-      {/* Modal for prompt editor */}
-      {selectedPrompt && (
-        <div className="modal-overlay" onClick={closePromptEditor}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px' }}>
-            <div className="modal-header">
-              <h2>Edit Prompt: {selectedPrompt.name.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</h2>
-              <button className="modal-close" onClick={closePromptEditor}>×</button>
-            </div>
-
-            <div className="modal-body">
-              <div style={{ marginBottom: '1rem', padding: '0.75rem', background: '#1a1a1a', border: '1px solid #444', borderRadius: '4px' }}>
-                <small>
-                  Status: <strong>{selectedPrompt.is_edited ? 'Custom' : 'Default'}</strong> |
-                  Source: <strong>{selectedPrompt.source}</strong>
-                </small>
-                <br />
-                <small style={{ color: '#888', marginTop: '0.5rem', display: 'block' }}>
-                  Use placeholders like {'{code}'}, {'{prompt}'}, {'{problem_number}'} in your template
-                </small>
-              </div>
-
-              <textarea
-                value={editedPromptContent}
-                onChange={(e) => setEditedPromptContent(e.target.value)}
-                rows={20}
-                style={{
-                  width: '100%',
-                  padding: '1rem',
-                  background: '#1a1a1a',
-                  border: '2px solid #444',
-                  borderRadius: '8px',
-                  color: '#fff',
-                  fontFamily: 'monospace',
-                  fontSize: '0.9rem',
-                  lineHeight: '1.5',
-                  resize: 'vertical'
-                }}
-                spellCheck={false}
-              />
-
-              <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                {selectedPrompt.is_edited && (
-                  <button onClick={resetPrompt} style={{ background: '#ff9800' }}>
-                    Reset to Default
-                  </button>
-                )}
-                <button onClick={savePrompt} disabled={savingPrompt}>
-                  {savingPrompt ? 'Saving...' : 'Save'}
-                </button>
-                <button onClick={closePromptEditor} style={{ background: '#555' }}>
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {ui.selectedPrompt && (
+        <PromptEditorModal
+          prompt={ui.selectedPrompt}
+          editedContent={ui.editedPromptContent}
+          saving={ui.savingPrompt}
+          onContentChange={(val) => setUi(prev => ({ ...prev, editedPromptContent: val }))}
+          onSave={savePrompt}
+          onReset={resetPrompt}
+          onClose={closePromptEditor}
+        />
       )}
     </div>
   )

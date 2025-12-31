@@ -6,12 +6,12 @@ import './styles/components.css'
 import { API_URL } from './config'
 import { useJobManager } from './hooks/useJobManager'
 import { usePromptLoader } from './hooks/usePromptLoader'
-import JobQueue from './components/JobQueue'
-import Header from './components/Header'
-import LeetCodeInput from './components/LeetCodeInput'
-import CodeEditorPanel from './components/CodeEditorPanel'
-import OutputPanel from './components/OutputPanel'
-import AppSidebar from './components/AppSidebar'
+import JobQueue from './components/app/JobQueue'
+import Header from './components/app/Header'
+import LeetCodeInput from './components/app/LeetCodeInput'
+import CodeEditorPanel from './components/app/CodeEditorPanel'
+import OutputPanel from './components/app/OutputPanel'
+import AppSidebar from './components/app/sidebar/AppSidebar'
 
 function App() {
   const navigate = useNavigate()
