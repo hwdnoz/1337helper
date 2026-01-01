@@ -1,21 +1,42 @@
 /**
  * Analytics Service
- * Handles sending performance metrics and events to backend/analytics platform
+ * Stores performance metrics and events in localStorage (no backend required)
  */
-
-import { API_URL } from '../config';
 
 class Analytics {
   constructor() {
-    this.endpoint = `${API_URL}/api/analytics`;
+    this.storageKey = 'app_analytics';
     this.sessionId = this.generateSessionId();
     this.isEnabled = true;
     this.queue = [];
     this.maxQueueSize = 50;
     this.flushInterval = 10000; // Flush every 10 seconds
+    this.maxStorageDays = 7; // Keep last 7 days
+
+    // Initialize storage
+    this.initStorage();
 
     // Start auto-flush
     this.startAutoFlush();
+  }
+
+  /**
+   * Initialize localStorage structure
+   */
+  initStorage() {
+    if (!localStorage.getItem(this.storageKey)) {
+      localStorage.setItem(this.storageKey, JSON.stringify({
+        events: [],
+        sessions: {},
+        metadata: {
+          version: '1.0',
+          createdAt: Date.now(),
+        }
+      }));
+    }
+
+    // Cleanup old data
+    this.cleanupOldData();
   }
 
   generateSessionId() {
@@ -151,7 +172,7 @@ class Analytics {
   }
 
   /**
-   * Flush queued metrics to server
+   * Flush queued metrics to localStorage
    */
   async flush() {
     if (this.queue.length === 0) return;
@@ -160,30 +181,193 @@ class Analytics {
     this.queue = [];
 
     try {
-      // Use sendBeacon for reliability (works even during page unload)
-      if (navigator.sendBeacon) {
-        const blob = new Blob([JSON.stringify({ events: batch })], {
-          type: 'application/json',
-        });
-        navigator.sendBeacon(this.endpoint, blob);
-      } else {
-        // Fallback to fetch
-        await fetch(this.endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ events: batch }),
-          keepalive: true,
-        }).catch((err) => {
-          console.warn('Failed to send analytics:', err);
-          // Re-queue failed items (up to limit)
-          if (this.queue.length < this.maxQueueSize) {
-            this.queue.push(...batch.slice(0, this.maxQueueSize - this.queue.length));
-          }
-        });
+      const data = this.getStorageData();
+
+      // Add events to storage
+      data.events.push(...batch);
+
+      // Update session info
+      if (!data.sessions[this.sessionId]) {
+        data.sessions[this.sessionId] = {
+          startedAt: Date.now(),
+          eventCount: 0,
+        };
+      }
+      data.sessions[this.sessionId].eventCount += batch.length;
+      data.sessions[this.sessionId].lastActivity = Date.now();
+
+      // Save to localStorage
+      this.saveStorageData(data);
+
+      if (import.meta.env.DEV) {
+        console.log(`💾 Saved ${batch.length} analytics events to localStorage`);
       }
     } catch (error) {
       console.warn('Analytics flush failed:', error);
+
+      // Re-queue failed items if storage is not full
+      if (this.queue.length < this.maxQueueSize) {
+        this.queue.push(...batch.slice(0, this.maxQueueSize - this.queue.length));
+      }
     }
+  }
+
+  /**
+   * Get data from localStorage
+   */
+  getStorageData() {
+    try {
+      const data = localStorage.getItem(this.storageKey);
+      return data ? JSON.parse(data) : this.getDefaultStorage();
+    } catch (error) {
+      console.warn('Failed to read analytics storage:', error);
+      return this.getDefaultStorage();
+    }
+  }
+
+  /**
+   * Save data to localStorage
+   */
+  saveStorageData(data) {
+    try {
+      localStorage.setItem(this.storageKey, JSON.stringify(data));
+    } catch (error) {
+      // Storage quota exceeded
+      console.warn('localStorage quota exceeded, cleaning up old data...');
+      this.cleanupOldData(true);
+
+      // Try again after cleanup
+      try {
+        localStorage.setItem(this.storageKey, JSON.stringify(data));
+      } catch (e) {
+        console.error('Failed to save analytics after cleanup:', e);
+      }
+    }
+  }
+
+  /**
+   * Get default storage structure
+   */
+  getDefaultStorage() {
+    return {
+      events: [],
+      sessions: {},
+      metadata: {
+        version: '1.0',
+        createdAt: Date.now(),
+      }
+    };
+  }
+
+  /**
+   * Cleanup old data (keep last N days)
+   */
+  cleanupOldData(aggressive = false) {
+    try {
+      const data = this.getStorageData();
+      const cutoffTime = Date.now() - (this.maxStorageDays * 24 * 60 * 60 * 1000);
+
+      // If aggressive, keep only last 3 days
+      const actualCutoff = aggressive
+        ? Date.now() - (3 * 24 * 60 * 60 * 1000)
+        : cutoffTime;
+
+      // Filter events
+      const originalCount = data.events.length;
+      data.events = data.events.filter(event =>
+        event.metadata.timestamp > actualCutoff
+      );
+
+      // Filter sessions
+      Object.keys(data.sessions).forEach(sessionId => {
+        if (data.sessions[sessionId].lastActivity < actualCutoff) {
+          delete data.sessions[sessionId];
+        }
+      });
+
+      this.saveStorageData(data);
+
+      if (import.meta.env.DEV && originalCount > data.events.length) {
+        console.log(`🗑️ Cleaned up ${originalCount - data.events.length} old analytics events`);
+      }
+    } catch (error) {
+      console.warn('Cleanup failed:', error);
+    }
+  }
+
+  /**
+   * Get all events from storage
+   */
+  getAllEvents() {
+    return this.getStorageData().events;
+  }
+
+  /**
+   * Get events by type
+   */
+  getEventsByType(type) {
+    return this.getAllEvents().filter(event => event.type === type);
+  }
+
+  /**
+   * Get events by name
+   */
+  getEventsByName(name) {
+    return this.getAllEvents().filter(event => event.name === name);
+  }
+
+  /**
+   * Get events within time range
+   */
+  getEventsByTimeRange(startTime, endTime) {
+    return this.getAllEvents().filter(event => {
+      const timestamp = event.metadata.timestamp;
+      return timestamp >= startTime && timestamp <= endTime;
+    });
+  }
+
+  /**
+   * Get session info
+   */
+  getSessionInfo() {
+    return this.getStorageData().sessions;
+  }
+
+  /**
+   * Clear all analytics data
+   */
+  clearAllData() {
+    localStorage.removeItem(this.storageKey);
+    this.initStorage();
+    if (import.meta.env.DEV) {
+      console.log('🗑️ Cleared all analytics data');
+    }
+  }
+
+  /**
+   * Export data as JSON
+   */
+  exportData() {
+    const data = this.getStorageData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `analytics-export-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Get storage size in bytes
+   */
+  getStorageSize() {
+    const data = localStorage.getItem(this.storageKey);
+    return data ? new Blob([data]).size : 0;
   }
 
   /**

@@ -77,19 +77,18 @@ docker-remove-images:
 	@docker rmi -f 1337helper-frontend 2>/dev/null || true
 
 compose-up:
-	BACKEND_TYPE=$(BACKEND_TYPE) docker compose up --scale backend=$(BACKEND_SCALE); \
+	BACKEND_TYPE=$(BACKEND_TYPE) docker compose up --scale backend=$(BACKEND_SCALE)
 
 compose-down:
 	@docker compose down
 
-compose-reload:
+compose-clear:
 	@docker compose down
 	@docker system prune -af
 	@docker buildx prune -af
-	@docker compose up --scale backend=5
 
-compose-rebuild-service:
-	@docker compose up --build -d $(SERVICE)
+compose-reload-frontend:
+	docker-compose up -d --build frontend
 
 test:
 	@echo "Running pytest unit tests..."

@@ -10,10 +10,19 @@ function AdminHeader({ showDbDropdown, setShowDbDropdown, onRefresh, navigate, o
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
         <div style={{ position: 'relative' }}>
           <button onClick={() => setShowDbDropdown(!showDbDropdown)}>
-            View Database ▼
+            View ▼
           </button>
           {showDbDropdown && (
             <div className="dropdown-menu">
+              <div
+                className="dropdown-item"
+                onClick={() => {
+                  navigate('/admin/analytics')
+                  setShowDbDropdown(false)
+                }}
+              >
+                📊 Performance Analytics
+              </div>
               <div
                 className="dropdown-item"
                 onClick={() => {
@@ -21,7 +30,7 @@ function AdminHeader({ showDbDropdown, setShowDbDropdown, onRefresh, navigate, o
                   setShowDbDropdown(false)
                 }}
               >
-                Metrics Database
+                📈 Metrics Database
               </div>
               <div
                 className="dropdown-item"
@@ -30,7 +39,7 @@ function AdminHeader({ showDbDropdown, setShowDbDropdown, onRefresh, navigate, o
                   setShowDbDropdown(false)
                 }}
               >
-                Cache Database
+                💾 Cache Database
               </div>
             </div>
           )}

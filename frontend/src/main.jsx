@@ -5,6 +5,7 @@ import App from './App'
 import AdminPage from './AdminPage'
 import MetricsDatabaseView from './MetricsDatabaseView'
 import CacheDatabaseView from './CacheDatabaseView'
+import AnalyticsPage from './AnalyticsPage'
 import Login from './Login'
 import ProtectedRoute from './ProtectedRoute'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -23,15 +24,20 @@ function RouteTracker() {
 }
 
 function AppWithAuth() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  // Check localStorage for existing auth state
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('isAuthenticated') === 'true';
+  });
 
   const handleLogin = () => {
-    setIsAuthenticated(true)
+    setIsAuthenticated(true);
+    localStorage.setItem('isAuthenticated', 'true');
     analytics.trackEvent('user_login');
   }
 
   const handleLogout = () => {
-    setIsAuthenticated(false)
+    setIsAuthenticated(false);
+    localStorage.removeItem('isAuthenticated');
     analytics.trackEvent('user_logout');
   }
 
@@ -64,6 +70,14 @@ function AppWithAuth() {
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
                 <AdminPage onLogout={handleLogout} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/analytics"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <AnalyticsPage onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />
