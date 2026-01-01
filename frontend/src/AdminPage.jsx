@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminControls from './components/admin/AdminControls'
 import SummaryStats from './components/admin/SummaryStats'
-import PerformanceChart from './components/admin/PerformanceChart'
-import CacheChart from './components/admin/CacheChart'
 import AdminHeader from './components/admin/AdminHeader'
 import RecentCallsList from './components/admin/RecentCallsList'
 import CallDetailsModal from './components/admin/CallDetailsModal'
 import PromptEditorModal from './components/admin/PromptEditorModal'
 import './App.css'
 import { API_URL } from './config'
+
+// Lazy load heavy chart components
+const PerformanceChart = lazy(() => import('./components/admin/PerformanceChart'))
+const CacheChart = lazy(() => import('./components/admin/CacheChart'))
 
 const AVAILABLE_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite']
 
@@ -392,9 +394,15 @@ function AdminPage({ onLogout }) {
             onClearCache={clearCache}
           />
 
-          <PerformanceChart metrics={data.metrics} />
-
-          <CacheChart metrics={data.metrics} />
+          <Suspense fallback={
+            <div style={{ padding: '2rem', textAlign: 'center', background: '#1e1e1e', border: '1px solid #3e3e42', borderRadius: '4px' }}>
+              <div className="spinner" style={{ margin: '0 auto 1rem' }}></div>
+              <div style={{ color: '#888' }}>Loading charts...</div>
+            </div>
+          }>
+            <PerformanceChart metrics={data.metrics} />
+            <CacheChart metrics={data.metrics} />
+          </Suspense>
 
           <RecentCallsList metrics={data.metrics} onCallClick={loadCallDetails} />
         </div>

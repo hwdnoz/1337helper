@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './App.css'
 import './styles/sidebar.css'
@@ -9,9 +9,11 @@ import { usePromptLoader } from './hooks/usePromptLoader'
 import JobQueue from './components/app/JobQueue'
 import Header from './components/app/Header'
 import LeetCodeInput from './components/app/LeetCodeInput'
-import CodeEditorPanel from './components/app/CodeEditorPanel'
 import OutputPanel from './components/app/OutputPanel'
 import AppSidebar from './components/app/sidebar/AppSidebar'
+
+// Lazy load heavy CodeMirror component
+const CodeEditorPanel = lazy(() => import('./components/app/CodeEditorPanel'))
 
 function App() {
   const navigate = useNavigate()
@@ -252,17 +254,26 @@ function App() {
         onClearCompleted={clearCompletedJobs}
       />
       <div className="container">
-        <CodeEditorPanel
-          content={content}
-          setContent={setContent}
-          ui={ui}
-          setUi={setUi}
-          cacheInfo={cacheInfo}
-          setCacheInfo={setCacheInfo}
-          runCode={runCode}
-          importTestCase={importTestCase}
-          clearTestCases={clearTestCases}
-        />
+        <Suspense fallback={
+          <div style={{ flex: '2', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1e1e1e', border: '1px solid #3e3e42' }}>
+            <div>
+              <div className="spinner" style={{ margin: '0 auto 1rem' }}></div>
+              <div style={{ color: '#888' }}>Loading editor...</div>
+            </div>
+          </div>
+        }>
+          <CodeEditorPanel
+            content={content}
+            setContent={setContent}
+            ui={ui}
+            setUi={setUi}
+            cacheInfo={cacheInfo}
+            setCacheInfo={setCacheInfo}
+            runCode={runCode}
+            importTestCase={importTestCase}
+            clearTestCases={clearTestCases}
+          />
+        </Suspense>
         <OutputPanel output={content.output} outputRef={outputRef} />
       </div>
 
