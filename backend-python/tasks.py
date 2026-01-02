@@ -4,6 +4,7 @@ from typing import Optional, Callable, Dict, Any
 from celery_app import celery_app
 from google import genai
 from services import logger, cache
+from services.rag_service import rag_service
 from prompts.loader import PromptLoader
 
 # Configure Google AI
@@ -42,15 +43,16 @@ def _execute_llm_task(
     model_aware_cache: bool = True
 ) -> Dict[str, Any]:
     """
-    Generic LLM task execution with caching, logging, and error handling.
+    Generic LLM task execution with RAG, caching, logging, and error handling.
 
     This function consolidates the common pattern used across all LLM tasks:
-    1. Check cache
-    2. Make API call if not cached
-    3. Post-process response (optional)
-    4. Log metrics
-    5. Save to cache
-    6. Handle errors
+    1. Augment prompt with RAG context
+    2. Check cache
+    3. Make API call if not cached
+    4. Post-process response (optional)
+    5. Log metrics
+    6. Save to cache
+    7. Handle errors
 
     Args:
         prompt: The prompt to send to the LLM
@@ -70,6 +72,12 @@ def _execute_llm_task(
         if cache_metadata is None:
             cache_metadata = {}
         cache_metadata['model'] = current_model
+
+        # Augment prompt with RAG context
+        retrieved_docs = rag_service.retrieve(query=prompt)
+        if retrieved_docs:
+            context = rag_service.format_context(retrieved_docs)
+            prompt = f"{prompt}\n\n{context}"
 
         # Check cache
         cached_response = cache.get(
