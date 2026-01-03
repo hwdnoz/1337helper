@@ -2,13 +2,13 @@ from flask import Blueprint, request, jsonify
 from services import logger, cache
 from services.rag_service import rag_service
 from prompts.loader import prompts
-from utils import handle_errors
+from utils import route_error_handler
 
 admin_bp = Blueprint('admin', __name__)
 
 
 @admin_bp.route('/api/observability/metrics', methods=['GET'])
-@handle_errors
+@route_error_handler
 def get_metrics():
     """Get recent LLM call metrics"""
     limit = request.args.get('limit', 100, type=int)
@@ -16,14 +16,14 @@ def get_metrics():
 
 
 @admin_bp.route('/api/observability/summary', methods=['GET'])
-@handle_errors
+@route_error_handler
 def get_summary():
     """Get summary statistics"""
     return {'summary': logger.get_summary_stats()}
 
 
 @admin_bp.route('/api/observability/call/<int:call_id>', methods=['GET'])
-@handle_errors
+@route_error_handler
 def get_call_details(call_id):
     """Get full details of a specific LLM call"""
     call = logger.get_call_by_id(call_id)
@@ -34,14 +34,14 @@ def get_call_details(call_id):
 
 
 @admin_bp.route('/api/current-model', methods=['GET'])
-@handle_errors
+@route_error_handler
 def get_current_model_route():
     """Get current model"""
     return {'model': cache.get_current_model()}
 
 
 @admin_bp.route('/api/current-model', methods=['POST'])
-@handle_errors
+@route_error_handler
 def set_current_model_route():
     """Set current model"""
     model = request.json.get('model')
@@ -53,21 +53,21 @@ def set_current_model_route():
 
 
 @admin_bp.route('/api/prompts', methods=['GET'])
-@handle_errors
+@route_error_handler
 def list_prompts():
     """List all available prompts with their edit status"""
     return {'prompts': prompts.list_all()}
 
 
 @admin_bp.route('/api/prompts/<prompt_name>', methods=['GET'])
-@handle_errors
+@route_error_handler
 def get_prompt(prompt_name):
     """Get a specific prompt (raw, unformatted)"""
     return {'prompt': prompts.get_raw(prompt_name)}
 
 
 @admin_bp.route('/api/prompts/<prompt_name>', methods=['POST'])
-@handle_errors
+@route_error_handler
 def update_prompt(prompt_name):
     """Update/edit a prompt"""
     content = request.json.get('content')
@@ -79,7 +79,7 @@ def update_prompt(prompt_name):
 
 
 @admin_bp.route('/api/prompts/<prompt_name>', methods=['DELETE'])
-@handle_errors
+@route_error_handler
 def reset_prompt(prompt_name):
     """Reset a prompt to default"""
     default_content = prompts.reset(prompt_name)
@@ -87,7 +87,7 @@ def reset_prompt(prompt_name):
 
 
 @admin_bp.route('/api/rag/documents', methods=['GET'])
-@handle_errors
+@route_error_handler
 def get_rag_documents():
     """Get all RAG documents"""
     limit = request.args.get('limit', 100, type=int)
@@ -95,7 +95,7 @@ def get_rag_documents():
 
 
 @admin_bp.route('/api/rag/documents', methods=['POST'])
-@handle_errors
+@route_error_handler
 def add_rag_document():
     """Add a new document to RAG"""
     content = request.json.get('content')
@@ -110,7 +110,7 @@ def add_rag_document():
 
 
 @admin_bp.route('/api/rag/documents/<int:doc_id>', methods=['DELETE'])
-@handle_errors
+@route_error_handler
 def delete_rag_document(doc_id):
     """Delete a RAG document"""
     if rag_service.delete_document(doc_id):

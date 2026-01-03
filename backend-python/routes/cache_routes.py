@@ -1,6 +1,6 @@
 from flask import Blueprint, request
 from services import cache
-from utils import handle_errors
+from utils import route_error_handler
 
 cache_bp = Blueprint('cache', __name__)
 
@@ -21,12 +21,12 @@ def create_cache_setting_routes(path, key, getter_fn, setter_fn, default_value=T
     set_endpoint = f'set_{key}'
 
     @cache_bp.route(path, methods=['GET'], endpoint=get_endpoint)
-    @handle_errors
+    @route_error_handler
     def get_setting():
         return {key: getter_fn()}
 
     @cache_bp.route(path, methods=['POST'], endpoint=set_endpoint)
-    @handle_errors
+    @route_error_handler
     def set_setting():
         value = request.json.get(key, default_value)
         setter_fn(value)
@@ -37,14 +37,14 @@ def create_cache_setting_routes(path, key, getter_fn, setter_fn, default_value=T
 
 
 @cache_bp.route('/api/cache/stats', methods=['GET'])
-@handle_errors
+@route_error_handler
 def get_cache_stats():
     """Get cache statistics"""
     return {'stats': cache.get_stats()}
 
 
 @cache_bp.route('/api/cache/entries', methods=['GET'])
-@handle_errors
+@route_error_handler
 def get_cache_entries():
     """Get all cache entries"""
     limit = request.args.get('limit', 100, type=int)
@@ -52,14 +52,14 @@ def get_cache_entries():
 
 
 @cache_bp.route('/api/cache/clear', methods=['POST'])
-@handle_errors
+@route_error_handler
 def clear_cache():
     """Clear all cache entries"""
     return {'deleted_count': cache.clear_all()}
 
 
 @cache_bp.route('/api/cache/clear-expired', methods=['POST'])
-@handle_errors
+@route_error_handler
 def clear_expired_cache():
     """Clear expired cache entries"""
     return {'deleted_count': cache.clear_expired()}

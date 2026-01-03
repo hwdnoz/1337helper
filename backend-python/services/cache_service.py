@@ -9,7 +9,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import redis
-from utils import redis_fallback, sqlite_connection, parse_metadata_json
+from utils import cache_error_handler, sqlite_connection, parse_metadata_json
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +207,7 @@ class PromptCache:
         """Store cache enabled state in Redis (shared across all containers)"""
         return self._set_redis_bool('cache_enabled', enabled)
 
-    @redis_fallback(default_value=True)
+    @cache_error_handler(default_value=True)
     def is_enabled(self):
         """Read cache enabled state from Redis (shared across all containers)"""
         return self._get_redis_bool('cache_enabled', default=True)
@@ -216,7 +216,7 @@ class PromptCache:
         """Store model-aware cache state in Redis (shared across all containers)"""
         return self._set_redis_bool('model_aware_cache', model_aware)
 
-    @redis_fallback(default_value=True)
+    @cache_error_handler(default_value=True)
     def is_model_aware_cache(self):
         """Read model-aware cache state from Redis (shared across all containers)"""
         return self._get_redis_bool('model_aware_cache', default=True)
@@ -225,7 +225,7 @@ class PromptCache:
         """Store current model in Redis (shared across all containers)"""
         return self._set_redis_string('current_model', model)
 
-    @redis_fallback(default_value='gemini-2.5-flash')
+    @cache_error_handler(default_value='gemini-2.5-flash')
     def get_current_model(self):
         """Read current model from Redis (shared across all containers)"""
         return self._get_redis_string('current_model', default='gemini-2.5-flash')
@@ -234,12 +234,12 @@ class PromptCache:
         """Store semantic cache enabled state in Redis (shared across all containers)"""
         return self._set_redis_bool('semantic_cache_enabled', enabled)
 
-    @redis_fallback(default_value=False)
+    @cache_error_handler(default_value=False)
     def is_semantic_cache_enabled(self):
         """Read semantic cache enabled state from Redis (shared across all containers)"""
         return self._get_redis_bool('semantic_cache_enabled', default=False)
 
-    @redis_fallback(default_value=0.95)
+    @cache_error_handler(default_value=0.95)
     def get_semantic_similarity_threshold(self):
         """Get semantic similarity threshold from Redis (default 0.95)"""
         return self._get_redis_float('semantic_similarity_threshold', default=0.95)

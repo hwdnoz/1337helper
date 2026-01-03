@@ -4,7 +4,7 @@ from typing import List, Dict, Optional
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
-from utils import sqlite_connection
+from utils import sqlite_connection, service_error_handler
 
 logger = logging.getLogger(__name__)
 
@@ -27,91 +27,78 @@ class RAGService:
                 )
             ''')
 
+    @service_error_handler(default_value=None, error_message_prefix="Error adding document")
     def add_document(self, content: str) -> Optional[int]:
         """Add a document to the RAG store"""
-        try:
-            with sqlite_connection(self.db_path) as (conn, cursor):
-                cursor.execute(
-                    'INSERT INTO documents (content) VALUES (?)',
-                    (content,)
-                )
-                return cursor.lastrowid
-        except Exception as e:
-            logger.error(f"Error adding document: {e}")
-            return None
+        with sqlite_connection(self.db_path) as (conn, cursor):
+            cursor.execute(
+                'INSERT INTO documents (content) VALUES (?)',
+                (content,)
+            )
+            return cursor.lastrowid
 
+    @service_error_handler(default_value=False, error_message_prefix="Error deleting document")
     def delete_document(self, doc_id: int) -> bool:
         """Delete a document by ID"""
-        try:
-            with sqlite_connection(self.db_path) as (conn, cursor):
-                cursor.execute('DELETE FROM documents WHERE id = ?', (doc_id,))
-                return cursor.rowcount > 0
-        except Exception as e:
-            logger.error(f"Error deleting document: {e}")
-            return False
+        with sqlite_connection(self.db_path) as (conn, cursor):
+            cursor.execute('DELETE FROM documents WHERE id = ?', (doc_id,))
+            return cursor.rowcount > 0
 
+    @service_error_handler(default_value=[], error_message_prefix="Error getting documents")
     def get_documents(self, limit: Optional[int] = None) -> List[Dict]:
         """Get documents with optional limit"""
-        try:
-            with sqlite_connection(self.db_path, row_factory=sqlite3.Row) as (conn, cursor):
-                if limit:
-                    cursor.execute('SELECT * FROM documents ORDER BY created_at DESC LIMIT ?', (limit,))
-                else:
-                    cursor.execute('SELECT * FROM documents ORDER BY created_at DESC')
-                return [dict(row) for row in cursor.fetchall()]
-        except Exception as e:
-            logger.error(f"Error getting documents: {e}")
-            return []
+        with sqlite_connection(self.db_path, row_factory=sqlite3.Row) as (conn, cursor):
+            if limit:
+                cursor.execute('SELECT * FROM documents ORDER BY created_at DESC LIMIT ?', (limit,))
+            else:
+                cursor.execute('SELECT * FROM documents ORDER BY created_at DESC')
+            return [dict(row) for row in cursor.fetchall()]
 
     def _get_all_documents(self) -> List[Dict]:
         """Get all documents (internal use for retrieval)"""
         return self.get_documents(limit=None)
 
+    @service_error_handler(default_value=[], error_message_prefix="Error during retrieval")
     def retrieve(self, query: str, top_k: int = 3, min_similarity: float = 0.6) -> List[Dict]:
         """Retrieve top-k most relevant documents for a query"""
         documents = self._get_all_documents()
         if not documents:
             return []
 
-        try:
-            # Extract content for vectorization
-            doc_contents = [d['content'] for d in documents]
-            doc_contents.append(query)
+        # Extract content for vectorization
+        doc_contents = [d['content'] for d in documents]
+        doc_contents.append(query)
 
-            # Create TF-IDF vectors
-            vectorizer = TfidfVectorizer(lowercase=True, stop_words='english', max_features=500)
-            tfidf_matrix = vectorizer.fit_transform(doc_contents)
+        # Create TF-IDF vectors
+        vectorizer = TfidfVectorizer(lowercase=True, stop_words='english', max_features=500)
+        tfidf_matrix = vectorizer.fit_transform(doc_contents)
 
-            # Calculate cosine similarity
-            similarities = cosine_similarity(tfidf_matrix[-1:], tfidf_matrix[:-1])[0]
+        # Calculate cosine similarity
+        similarities = cosine_similarity(tfidf_matrix[-1:], tfidf_matrix[:-1])[0]
 
-            # Log top 5 similarity scores for debugging
-            top_5_indices = np.argsort(similarities)[::-1][:5]
-            print(f"[RAG DEBUG] Top 5 document similarities for query: '{query[:100]}...'")
-            for i, idx in enumerate(top_5_indices, 1):
-                if idx < len(documents):
-                    print(f"[RAG DEBUG]   {i}. Doc {documents[idx]['id']}: {similarities[idx]:.4f} | {documents[idx]['content'][:80]}...")
+        # Log top 5 similarity scores for debugging
+        top_5_indices = np.argsort(similarities)[::-1][:5]
+        print(f"[RAG DEBUG] Top 5 document similarities for query: '{query[:100]}...'")
+        for i, idx in enumerate(top_5_indices, 1):
+            if idx < len(documents):
+                print(f"[RAG DEBUG]   {i}. Doc {documents[idx]['id']}: {similarities[idx]:.4f} | {documents[idx]['content'][:80]}...")
 
-            # Get top-k indices above threshold
-            valid_indices = np.where(similarities >= min_similarity)[0]
-            if len(valid_indices) == 0:
-                print(f"[RAG DEBUG] No documents above similarity threshold {min_similarity}")
-                return []
-
-            top_indices = valid_indices[np.argsort(similarities[valid_indices])[::-1]][:top_k]
-
-            # Build results
-            results = []
-            for idx in top_indices:
-                doc = documents[idx].copy()
-                doc['similarity_score'] = float(similarities[idx])
-                results.append(doc)
-
-            return results
-
-        except Exception as e:
-            logger.error(f"Error during retrieval: {e}")
+        # Get top-k indices above threshold
+        valid_indices = np.where(similarities >= min_similarity)[0]
+        if len(valid_indices) == 0:
+            print(f"[RAG DEBUG] No documents above similarity threshold {min_similarity}")
             return []
+
+        top_indices = valid_indices[np.argsort(similarities[valid_indices])[::-1]][:top_k]
+
+        # Build results
+        results = []
+        for idx in top_indices:
+            doc = documents[idx].copy()
+            doc['similarity_score'] = float(similarities[idx])
+            results.append(doc)
+
+        return results
 
     def format_context(self, documents: List[Dict], max_length: int = 2000) -> str:
         """Format retrieved documents into context string"""
