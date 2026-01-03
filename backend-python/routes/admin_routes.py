@@ -91,10 +91,7 @@ def reset_prompt(prompt_name):
 def get_rag_documents():
     """Get all RAG documents"""
     limit = request.args.get('limit', 100, type=int)
-    documents = rag_service._get_all_documents()
-    # Apply limit
-    limited_docs = documents[:limit] if limit else documents
-    return {'documents': limited_docs}
+    return {'documents': rag_service.get_documents(limit=limit)}
 
 
 @admin_bp.route('/api/rag/documents', methods=['POST'])
@@ -116,14 +113,7 @@ def add_rag_document():
 @handle_errors
 def delete_rag_document(doc_id):
     """Delete a RAG document"""
-    # We need to add a delete method to rag_service
-    try:
-        from utils import sqlite_connection
-        with sqlite_connection(rag_service.db_path) as (conn, cursor):
-            cursor.execute('DELETE FROM documents WHERE id = ?', (doc_id,))
-            if cursor.rowcount > 0:
-                return {'success': True, 'message': f'Document {doc_id} deleted'}
-            else:
-                return jsonify({'success': False, 'error': 'Document not found'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+    if rag_service.delete_document(doc_id):
+        return {'message': f'Document {doc_id} deleted'}
+    else:
+        return jsonify({'success': False, 'error': 'Document not found'})

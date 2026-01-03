@@ -40,15 +40,32 @@ class RAGService:
             logger.error(f"Error adding document: {e}")
             return None
 
-    def _get_all_documents(self) -> List[Dict]:
-        """Get all documents"""
+    def delete_document(self, doc_id: int) -> bool:
+        """Delete a document by ID"""
+        try:
+            with sqlite_connection(self.db_path) as (conn, cursor):
+                cursor.execute('DELETE FROM documents WHERE id = ?', (doc_id,))
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error deleting document: {e}")
+            return False
+
+    def get_documents(self, limit: Optional[int] = None) -> List[Dict]:
+        """Get documents with optional limit"""
         try:
             with sqlite_connection(self.db_path, row_factory=sqlite3.Row) as (conn, cursor):
-                cursor.execute('SELECT * FROM documents ORDER BY created_at DESC')
+                if limit:
+                    cursor.execute('SELECT * FROM documents ORDER BY created_at DESC LIMIT ?', (limit,))
+                else:
+                    cursor.execute('SELECT * FROM documents ORDER BY created_at DESC')
                 return [dict(row) for row in cursor.fetchall()]
         except Exception as e:
             logger.error(f"Error getting documents: {e}")
             return []
+
+    def _get_all_documents(self) -> List[Dict]:
+        """Get all documents (internal use for retrieval)"""
+        return self.get_documents(limit=None)
 
     def retrieve(self, query: str, top_k: int = 3, min_similarity: float = 0.6) -> List[Dict]:
         """Retrieve top-k most relevant documents for a query"""
