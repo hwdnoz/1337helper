@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from services import logger, cache
+from services.rag_service import rag_service
 from prompts.loader import prompts
 from utils import handle_errors
 
@@ -83,3 +84,46 @@ def reset_prompt(prompt_name):
     """Reset a prompt to default"""
     default_content = prompts.reset(prompt_name)
     return {'message': 'Prompt reset to default', 'content': default_content}
+
+
+@admin_bp.route('/api/rag/documents', methods=['GET'])
+@handle_errors
+def get_rag_documents():
+    """Get all RAG documents"""
+    limit = request.args.get('limit', 100, type=int)
+    documents = rag_service._get_all_documents()
+    # Apply limit
+    limited_docs = documents[:limit] if limit else documents
+    return {'documents': limited_docs}
+
+
+@admin_bp.route('/api/rag/documents', methods=['POST'])
+@handle_errors
+def add_rag_document():
+    """Add a new document to RAG"""
+    content = request.json.get('content')
+    if not content:
+        return jsonify({'success': False, 'error': 'No content provided'})
+
+    doc_id = rag_service.add_document(content)
+    if doc_id:
+        return {'success': True, 'id': doc_id}
+    else:
+        return jsonify({'success': False, 'error': 'Failed to add document'})
+
+
+@admin_bp.route('/api/rag/documents/<int:doc_id>', methods=['DELETE'])
+@handle_errors
+def delete_rag_document(doc_id):
+    """Delete a RAG document"""
+    # We need to add a delete method to rag_service
+    try:
+        from utils import sqlite_connection
+        with sqlite_connection(rag_service.db_path) as (conn, cursor):
+            cursor.execute('DELETE FROM documents WHERE id = ?', (doc_id,))
+            if cursor.rowcount > 0:
+                return {'success': True, 'message': f'Document {doc_id} deleted'}
+            else:
+                return jsonify({'success': False, 'error': 'Document not found'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})

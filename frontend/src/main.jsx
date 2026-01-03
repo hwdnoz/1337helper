@@ -5,6 +5,7 @@ import App from './App'
 import AdminPage from './AdminPage'
 import MetricsDatabaseView from './MetricsDatabaseView'
 import CacheDatabaseView from './CacheDatabaseView'
+import RagDatabaseView from './RagDatabaseView'
 import AnalyticsPage from './AnalyticsPage'
 import Login from './Login'
 import ProtectedRoute from './ProtectedRoute'
@@ -94,6 +95,14 @@ function AppWithAuth() {
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated}>
                 <CacheDatabaseView onLogout={handleLogout} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/rag-database"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <RagDatabaseView onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />
