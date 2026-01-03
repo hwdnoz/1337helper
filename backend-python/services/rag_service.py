@@ -68,9 +68,17 @@ class RAGService:
             # Calculate cosine similarity
             similarities = cosine_similarity(tfidf_matrix[-1:], tfidf_matrix[:-1])[0]
 
+            # Log top 5 similarity scores for debugging
+            top_5_indices = np.argsort(similarities)[::-1][:5]
+            print(f"[RAG DEBUG] Top 5 document similarities for query: '{query[:100]}...'")
+            for i, idx in enumerate(top_5_indices, 1):
+                if idx < len(documents):
+                    print(f"[RAG DEBUG]   {i}. Doc {documents[idx]['id']}: {similarities[idx]:.4f} | {documents[idx]['content'][:80]}...")
+
             # Get top-k indices above threshold
             valid_indices = np.where(similarities >= min_similarity)[0]
             if len(valid_indices) == 0:
+                print(f"[RAG DEBUG] No documents above similarity threshold {min_similarity}")
                 return []
 
             top_indices = valid_indices[np.argsort(similarities[valid_indices])[::-1]][:top_k]
