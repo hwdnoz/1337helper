@@ -12,6 +12,10 @@ logger = logging.getLogger(__name__)
 class RAGService:
     """RAG service for document retrieval"""
 
+    # Chunking configuration
+    CHUNK_SIZE = 500  # Characters per chunk
+    CHUNK_OVERLAP = 100  # Character overlap between chunks
+
     def __init__(self, db_path='data/rag_documents.db'):
         self.db_path = db_path
         self._init_database()
@@ -23,40 +27,118 @@ class RAGService:
                 CREATE TABLE IF NOT EXISTS documents (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     content TEXT NOT NULL,
+                    chunk_index INTEGER DEFAULT 0,
+                    parent_doc_id INTEGER,
+                    chunk_count INTEGER DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
+            # Add indexes for efficient chunk queries
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_parent_doc ON documents(parent_doc_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_chunk_index ON documents(chunk_index)')
+
+    def _chunk_text(self, text: str) -> List[str]:
+        """Split text into overlapping chunks"""
+        if len(text) <= self.CHUNK_SIZE:
+            return [text]
+
+        chunks = []
+        start = 0
+
+        while start < len(text):
+            # Get chunk
+            end = start + self.CHUNK_SIZE
+            chunk = text[start:end]
+
+            # If not at the end and we can split at word boundary, do so
+            if end < len(text) and ' ' in chunk:
+                # Try to break at last space to avoid cutting words
+                last_space = chunk.rfind(' ')
+                if last_space > self.CHUNK_SIZE // 2:  # Only if space is in latter half
+                    chunk = chunk[:last_space]
+                    end = start + last_space
+
+            chunks.append(chunk.strip())
+
+            # Move start forward, accounting for overlap
+            start = end - self.CHUNK_OVERLAP
+
+            # Avoid infinite loop if chunk_size <= overlap
+            if start <= len(chunks[-1]) + len(chunks) - 1:
+                start = end
+
+        return chunks
 
     @service_error_handler(default_value=None, error_message_prefix="Error adding document")
     def add_document(self, content: str) -> Optional[int]:
-        """Add a document to the RAG store"""
-        with sqlite_connection(self.db_path) as (conn, cursor):
+        """Add a document to the RAG store, chunking if necessary"""
+        with sqlite_connection(self.db_path, row_factory=sqlite3.Row) as (conn, cursor):
+            # Chunk the content
+            chunks = self._chunk_text(content)
+
+            # If single chunk, store as simple document
+            if len(chunks) == 1:
+                cursor.execute(
+                    'INSERT INTO documents (content, chunk_index, chunk_count) VALUES (?, 0, 1)',
+                    (content,)
+                )
+                return cursor.lastrowid
+
+            # Multiple chunks: create parent and chunk documents
+            # First, create parent document (stores full content)
             cursor.execute(
-                'INSERT INTO documents (content) VALUES (?)',
-                (content,)
+                'INSERT INTO documents (content, chunk_index, chunk_count) VALUES (?, -1, ?)',
+                (content, len(chunks))
             )
-            return cursor.lastrowid
+            parent_id = cursor.lastrowid
+
+            # Then create chunk documents
+            for i, chunk in enumerate(chunks):
+                cursor.execute(
+                    'INSERT INTO documents (content, chunk_index, parent_doc_id, chunk_count) VALUES (?, ?, ?, ?)',
+                    (chunk, i, parent_id, len(chunks))
+                )
+
+            return parent_id
 
     @service_error_handler(default_value=False, error_message_prefix="Error deleting document")
     def delete_document(self, doc_id: int) -> bool:
-        """Delete a document by ID"""
+        """Delete a document by ID (and all its chunks if it's a parent)"""
         with sqlite_connection(self.db_path) as (conn, cursor):
+            # Delete the document
             cursor.execute('DELETE FROM documents WHERE id = ?', (doc_id,))
-            return cursor.rowcount > 0
+            deleted = cursor.rowcount > 0
+
+            # Also delete any chunks that reference this as parent
+            cursor.execute('DELETE FROM documents WHERE parent_doc_id = ?', (doc_id,))
+
+            return deleted
 
     @service_error_handler(default_value=[], error_message_prefix="Error getting documents")
     def get_documents(self, limit: Optional[int] = None) -> List[Dict]:
-        """Get documents with optional limit"""
+        """Get documents with optional limit (only returns parent documents or standalone docs, not chunks)"""
         with sqlite_connection(self.db_path, row_factory=sqlite3.Row) as (conn, cursor):
+            # Only return documents that are parents (chunk_index=-1) or standalone (chunk_index=0 and parent_doc_id IS NULL)
             if limit:
-                cursor.execute('SELECT * FROM documents ORDER BY created_at DESC LIMIT ?', (limit,))
+                cursor.execute('''
+                    SELECT * FROM documents
+                    WHERE chunk_index <= 0 AND (parent_doc_id IS NULL OR chunk_index = -1)
+                    ORDER BY created_at DESC LIMIT ?
+                ''', (limit,))
             else:
-                cursor.execute('SELECT * FROM documents ORDER BY created_at DESC')
+                cursor.execute('''
+                    SELECT * FROM documents
+                    WHERE chunk_index <= 0 AND (parent_doc_id IS NULL OR chunk_index = -1)
+                    ORDER BY created_at DESC
+                ''')
             return [dict(row) for row in cursor.fetchall()]
 
     def _get_all_documents(self) -> List[Dict]:
-        """Get all documents (internal use for retrieval)"""
-        return self.get_documents(limit=None)
+        """Get all searchable chunks (excludes parent documents with chunk_index=-1)"""
+        with sqlite_connection(self.db_path, row_factory=sqlite3.Row) as (conn, cursor):
+            # Only return actual chunks (chunk_index >= 0), not parent documents (chunk_index = -1)
+            cursor.execute('SELECT * FROM documents WHERE chunk_index >= 0 ORDER BY created_at DESC')
+            return [dict(row) for row in cursor.fetchall()]
 
     @service_error_handler(default_value=[], error_message_prefix="Error during retrieval")
     def retrieve(self, query: str, top_k: int = 3, min_similarity: float = 0.6) -> List[Dict]:
@@ -99,15 +181,6 @@ class RAGService:
             results.append(doc)
 
         return results
-
-    def set_enabled(self, enabled: bool) -> bool:
-        """Store RAG enabled state in Redis (shared across all containers)"""
-        return self._set_redis_bool('rag_enabled', enabled)
-
-    @cache_error_handler(default_value=True)
-    def is_enabled(self) -> bool:
-        """Read RAG enabled state from Redis (shared across all containers)"""
-        return self._get_redis_bool('rag_enabled', default=True)
 
     def format_context(self, documents: List[Dict], max_length: int = 2000) -> str:
         """Format retrieved documents into context string"""
