@@ -36,8 +36,8 @@ function App() {
     leetcodeNumber: ''
   })
 
-  // Cache metadata state (all cache-related data)
-  const [cacheInfo, setCacheInfo] = useState({
+  // Response metadata state (cache, RAG, etc.)
+  const [metadata, setMetadata] = useState({
     lastUpdate: null,
     cacheHit: false,
     semanticCacheHit: false,
@@ -45,7 +45,8 @@ function App() {
     cachedPrompt: null,
     currentPrompt: null,
     testCaseLastUpdate: null,
-    testCaseCacheHit: false
+    testCaseCacheHit: false,
+    ragDocCount: 0
   })
 
   // Custom hooks
@@ -79,7 +80,7 @@ function App() {
         } else if (currentJob.result.test_cases) {
           // Test case generation job - update test case window
           setContent(prev => ({ ...prev, testCase: currentJob.result.test_cases }))
-          setCacheInfo(prev => ({
+          setMetadata(prev => ({
             ...prev,
             testCaseLastUpdate: new Date(),
             testCaseCacheHit: currentJob.result.from_cache || false
@@ -87,14 +88,15 @@ function App() {
           return // Don't update lastUpdate for test cases
         }
 
-        setCacheInfo(prev => ({
+        setMetadata(prev => ({
           ...prev,
           lastUpdate: new Date(),
           cacheHit: currentJob.result.from_cache || false,
           semanticCacheHit: currentJob.result.semantic_cache_hit || false,
           similarityScore: currentJob.result.similarity_score || null,
           cachedPrompt: currentJob.result.cached_prompt || null,
-          currentPrompt: currentJob.result.current_prompt || null
+          currentPrompt: currentJob.result.current_prompt || null,
+          ragDocCount: currentJob.result.rag_doc_count || 0
         }))
         setUi(prev => ({ ...prev, showPromptDiff: false }))
       }
@@ -267,8 +269,8 @@ function App() {
             setContent={setContent}
             ui={ui}
             setUi={setUi}
-            cacheInfo={cacheInfo}
-            setCacheInfo={setCacheInfo}
+            metadata={metadata}
+            setMetadata={setMetadata}
             runCode={runCode}
             importTestCase={importTestCase}
             clearTestCases={clearTestCases}
@@ -282,7 +284,7 @@ function App() {
         setUi={setUi}
         content={content}
         setContent={setContent}
-        cacheInfo={cacheInfo}
+        metadata={metadata}
         generateTestCases={generateTestCases}
         importTestCase={importTestCase}
         clearTestCases={clearTestCases}

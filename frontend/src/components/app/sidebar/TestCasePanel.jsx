@@ -1,7 +1,7 @@
 function TestCasePanel({
   content,
   setContent,
-  cacheInfo,
+  metadata,
   generateTestCases,
   importTestCase,
   clearTestCases
@@ -14,11 +14,11 @@ function TestCasePanel({
         </div>
         <div className="sidebar-section">
           <label>Test Cases</label>
-          {cacheInfo.testCaseLastUpdate && (
-            <div className={`cache-indicator ${cacheInfo.testCaseCacheHit ? 'hit' : 'miss'}`}>
-              {cacheInfo.testCaseCacheHit && <span className="cache-lightning">⚡</span>}
-              Last updated: {cacheInfo.testCaseLastUpdate.toLocaleTimeString()}
-              {cacheInfo.testCaseCacheHit && <span style={{ fontWeight: 'bold' }}>(from cache)</span>}
+          {metadata.testCaseLastUpdate && (
+            <div className={`response-metadata ${metadata.testCaseCacheHit ? 'cache-hit' : 'cache-miss'}`}>
+              {metadata.testCaseCacheHit && <span className="cache-lightning">⚡</span>}
+              Last updated: {metadata.testCaseLastUpdate.toLocaleTimeString()}
+              {metadata.testCaseCacheHit && <span style={{ fontWeight: 'bold' }}>(from cache)</span>}
             </div>
           )}
           <textarea

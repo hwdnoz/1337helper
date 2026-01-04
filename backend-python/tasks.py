@@ -74,8 +74,10 @@ def _execute_llm_task(
         cache_metadata['model'] = current_model
 
         # Augment prompt with RAG context (if enabled)
+        rag_doc_count = 0
         if rag_service.is_enabled():
             retrieved_docs = rag_service.retrieve(query=prompt)
+            rag_doc_count = len(retrieved_docs)
             if retrieved_docs:
                 print(f"[RAG] Found {len(retrieved_docs)} matching documents:")
                 for i, doc in enumerate(retrieved_docs, 1):
@@ -112,7 +114,8 @@ def _execute_llm_task(
                 'similarity_score': cached_response.get('similarity_score'),
                 'cached_prompt': cached_response.get('prompt'),
                 'current_prompt': cached_response.get('current_prompt'),
-                'metadata': cached_response.get('metadata', {})
+                'metadata': cached_response.get('metadata', {}),
+                'rag_doc_count': rag_doc_count
             }
 
         # Make LLM call
@@ -156,7 +159,8 @@ def _execute_llm_task(
             'success': True,
             response_key: processed_response,
             'from_cache': False,
-            'latency_ms': latency_ms
+            'latency_ms': latency_ms,
+            'rag_doc_count': rag_doc_count
         }
 
     except Exception as e:

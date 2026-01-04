@@ -1,11 +1,13 @@
 import sqlite3
 import logging
 import hashlib
+import os
 from typing import List, Dict, Optional
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
-from utils import sqlite_connection, service_error_handler
+import redis
+from utils import sqlite_connection, service_error_handler, cache_error_handler
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +22,24 @@ class RAGService:
     def __init__(self, db_path='data/rag_documents.db'):
         self.db_path = db_path
         self._init_database()
+
+    def _get_redis_client(self):
+        """Get Redis client with password authentication"""
+        password = os.environ.get('REDIS_PASSWORD', '')
+        return redis.Redis(host='redis', port=6379, db=1,
+                          password=password, decode_responses=True)
+
+    def _get_redis_bool(self, key, default=True):
+        """Get boolean value from Redis (stored as '1'/'0')"""
+        r = self._get_redis_client()
+        value = r.get(key)
+        return value == '1' if value is not None else default
+
+    def _set_redis_bool(self, key, value):
+        """Set boolean value in Redis (stored as '1'/'0')"""
+        r = self._get_redis_client()
+        r.set(key, '1' if value else '0')
+        return value
 
     def _init_database(self):
         """Initialize RAG documents database"""
@@ -221,6 +241,15 @@ class RAGService:
             current_length += len(doc_text)
 
         return "".join(context_parts)
+
+    def set_enabled(self, enabled: bool) -> bool:
+        """Store RAG enabled state in Redis (shared across all containers)"""
+        return self._set_redis_bool('rag_enabled', enabled)
+
+    @cache_error_handler(default_value=True)
+    def is_enabled(self) -> bool:
+        """Read RAG enabled state from Redis (shared across all containers)"""
+        return self._get_redis_bool('rag_enabled', default=True)
 
 
 # Global RAG instance
