@@ -1,4 +1,4 @@
-.PHONY: help local-start local-stop docker-frontend docker-backend docker-start docker-stop docker-logs-backend docker-logs-frontend docker-remove-containers docker-remove-images compose-up compose-down test
+.PHONY: help local-start local-stop docker-frontend docker-backend docker-start docker-stop docker-logs-backend docker-logs-frontend docker-remove-containers docker-remove-images compose-up compose-down compose-clear compose-reload-frontend test
 
 .DEFAULT_GOAL := help
 
@@ -27,7 +27,8 @@ help:
 	@echo "  make compose-up BACKEND_SCALE=5          - Start with 5 Python backend instances"
 	@echo "  make compose-up BACKEND_TYPE=node BACKEND_SCALE=3  - 3 Node.js instances"
 	@echo "  make compose-down                        - Stop and remove all containers"
-	@echo "  make compose-reload                      - Full rebuild: down, prune, up"
+	@echo "  make compose-clear                       - Stop containers and prune Docker system"
+	@echo "  make compose-reload-frontend             - Rebuild and restart frontend container only"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make docker-remove-containers - Remove Docker containers"
