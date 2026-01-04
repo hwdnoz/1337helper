@@ -100,6 +100,15 @@ class RAGService:
 
         return results
 
+    def set_enabled(self, enabled: bool) -> bool:
+        """Store RAG enabled state in Redis (shared across all containers)"""
+        return self._set_redis_bool('rag_enabled', enabled)
+
+    @cache_error_handler(default_value=True)
+    def is_enabled(self) -> bool:
+        """Read RAG enabled state from Redis (shared across all containers)"""
+        return self._get_redis_bool('rag_enabled', default=True)
+
     def format_context(self, documents: List[Dict], max_length: int = 2000) -> str:
         """Format retrieved documents into context string"""
         if not documents:

@@ -31,6 +31,7 @@ function AdminPage({ onLogout }) {
     cacheEnabled: true,
     modelAwareCache: true,
     semanticCacheEnabled: false,
+    ragEnabled: true,
     currentModel: 'gemini-2.5-flash'
   })
 
@@ -51,6 +52,7 @@ function AdminPage({ onLogout }) {
     loadCacheEnabled()
     loadModelAwareCache()
     loadSemanticCacheEnabled()
+    loadRagEnabled()
     loadCurrentModel()
     loadPrompts()
   }, [])
@@ -242,6 +244,37 @@ function AdminPage({ onLogout }) {
     }
   }
 
+  const loadRagEnabled = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/rag/enabled`)
+      const responseData = await res.json()
+
+      if (responseData.success) {
+        setSettings(prev => ({ ...prev, ragEnabled: responseData.rag_enabled }))
+      }
+    } catch (error) {
+      console.error('Failed to load RAG enabled status:', error)
+    }
+  }
+
+  const toggleRag = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/rag/enabled`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rag_enabled: !settings.ragEnabled })
+      })
+      const responseData = await res.json()
+
+      if (responseData.success) {
+        setSettings(prev => ({ ...prev, ragEnabled: responseData.rag_enabled }))
+      }
+    } catch (error) {
+      console.error('Failed to toggle RAG:', error)
+      alert('Failed to toggle RAG')
+    }
+  }
+
   const loadCurrentModel = async () => {
     try {
       const res = await fetch(`${API_URL}/api/current-model`)
@@ -371,11 +404,13 @@ function AdminPage({ onLogout }) {
         cacheEnabled={settings.cacheEnabled}
         modelAwareCache={settings.modelAwareCache}
         semanticCacheEnabled={settings.semanticCacheEnabled}
+        ragEnabled={settings.ragEnabled}
         prompts={data.prompts}
         onModelChange={changeModel}
         onToggleCache={toggleCache}
         onToggleModelAwareCache={toggleModelAwareCache}
         onToggleSemanticCache={toggleSemanticCache}
+        onToggleRag={toggleRag}
         onPromptSelect={openPromptEditor}
       />
 

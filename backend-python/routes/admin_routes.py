@@ -117,3 +117,19 @@ def delete_rag_document(doc_id):
         return {'message': f'Document {doc_id} deleted'}
     else:
         return jsonify({'success': False, 'error': 'Document not found'})
+
+
+@admin_bp.route('/api/rag/enabled', methods=['GET'])
+@route_error_handler
+def get_rag_enabled():
+    """Get RAG enabled status"""
+    return {'rag_enabled': rag_service.is_enabled()}
+
+
+@admin_bp.route('/api/rag/enabled', methods=['POST'])
+@route_error_handler
+def set_rag_enabled():
+    """Set RAG enabled status"""
+    enabled = request.json.get('rag_enabled', True)
+    rag_service.set_enabled(enabled)
+    return {'rag_enabled': rag_service.is_enabled()}

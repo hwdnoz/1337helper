@@ -6,11 +6,13 @@ function AdminControls({
   cacheEnabled,
   modelAwareCache,
   semanticCacheEnabled,
+  ragEnabled,
   prompts,
   onModelChange,
   onToggleCache,
   onToggleModelAwareCache,
   onToggleSemanticCache,
+  onToggleRag,
   onPromptSelect
 }) {
   const [showPromptDropdown, setShowPromptDropdown] = useState(false)
@@ -100,6 +102,23 @@ function AdminControls({
         title={semanticCacheEnabled ? 'Use semantic search to find similar cached prompts' : 'Only exact matches will use cache'}
       >
         Semantic Cache: {semanticCacheEnabled ? 'ON' : 'OFF'}
+      </button>
+
+      <button
+        onClick={onToggleRag}
+        style={{
+          background: ragEnabled ? '#ff6f00' : '#616161',
+          color: '#fff',
+          border: 'none',
+          padding: '0.5rem 1rem',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontSize: '0.85rem',
+          fontWeight: '500'
+        }}
+        title={ragEnabled ? 'Augment prompts with relevant documents from RAG' : 'RAG disabled - no document retrieval'}
+      >
+        RAG: {ragEnabled ? 'ON' : 'OFF'}
       </button>
 
       <div style={{ position: 'relative' }}>
