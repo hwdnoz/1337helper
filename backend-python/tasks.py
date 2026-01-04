@@ -73,18 +73,21 @@ def _execute_llm_task(
             cache_metadata = {}
         cache_metadata['model'] = current_model
 
-        # Augment prompt with RAG context
-        retrieved_docs = rag_service.retrieve(query=prompt)
-        if retrieved_docs:
-            print(f"[RAG] Found {len(retrieved_docs)} matching documents:")
-            for i, doc in enumerate(retrieved_docs, 1):
-                similarity = doc.get('similarity_score', 0)
-                content_preview = doc.get('content', '')[:100]
-                print(f"[RAG]   {i}. Similarity: {similarity:.4f} | Preview: {content_preview}...")
-            context = rag_service.format_context(retrieved_docs)
-            prompt = f"{prompt}\n\n{context}"
+        # Augment prompt with RAG context (if enabled)
+        if rag_service.is_enabled():
+            retrieved_docs = rag_service.retrieve(query=prompt)
+            if retrieved_docs:
+                print(f"[RAG] Found {len(retrieved_docs)} matching documents:")
+                for i, doc in enumerate(retrieved_docs, 1):
+                    similarity = doc.get('similarity_score', 0)
+                    content_preview = doc.get('content', '')[:100]
+                    print(f"[RAG]   {i}. Similarity: {similarity:.4f} | Preview: {content_preview}...")
+                context = rag_service.format_context(retrieved_docs)
+                prompt = f"{prompt}\n\n{context}"
+            else:
+                print("[RAG] No matching documents found in RAG system")
         else:
-            print("[RAG] No matching documents found in RAG system")
+            print("[RAG] RAG is disabled, skipping document retrieval")
 
         # Check cache
         cached_response = cache.get(
