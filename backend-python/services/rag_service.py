@@ -1,5 +1,6 @@
 import sqlite3
 import logging
+import hashlib
 from typing import List, Dict, Optional
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -27,15 +28,21 @@ class RAGService:
                 CREATE TABLE IF NOT EXISTS documents (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     content TEXT NOT NULL,
+                    content_hash TEXT,
                     chunk_index INTEGER DEFAULT 0,
                     parent_doc_id INTEGER,
                     chunk_count INTEGER DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
-            # Add indexes for efficient chunk queries
+            # Add indexes for efficient chunk queries and deduplication
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_parent_doc ON documents(parent_doc_id)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_chunk_index ON documents(chunk_index)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_content_hash ON documents(content_hash)')
+
+    def _hash_content(self, content: str) -> str:
+        """Generate SHA256 hash of content for deduplication"""
+        return hashlib.sha256(content.encode()).hexdigest()
 
     def _chunk_text(self, text: str) -> List[str]:
         """Split text into overlapping chunks"""
@@ -72,27 +79,40 @@ class RAGService:
     @service_error_handler(default_value=None, error_message_prefix="Error adding document")
     def add_document(self, content: str) -> Optional[int]:
         """Add a document to the RAG store, chunking if necessary"""
+        # Calculate content hash for deduplication
+        content_hash = self._hash_content(content)
+
         with sqlite_connection(self.db_path, row_factory=sqlite3.Row) as (conn, cursor):
-            # Chunk the content
+            # Check if document with this hash already exists (only check parent/standalone docs)
+            cursor.execute(
+                'SELECT id FROM documents WHERE content_hash = ? AND chunk_index <= 0',
+                (content_hash,)
+            )
+            existing = cursor.fetchone()
+            if existing:
+                logger.info(f"Document with hash {content_hash[:8]}... already exists (id={existing['id']}), skipping duplicate")
+                return existing['id']
+
+            # Document is new, proceed with chunking and adding
             chunks = self._chunk_text(content)
 
             # If single chunk, store as simple document
             if len(chunks) == 1:
                 cursor.execute(
-                    'INSERT INTO documents (content, chunk_index, chunk_count) VALUES (?, 0, 1)',
-                    (content,)
+                    'INSERT INTO documents (content, content_hash, chunk_index, chunk_count) VALUES (?, ?, 0, 1)',
+                    (content, content_hash)
                 )
                 return cursor.lastrowid
 
             # Multiple chunks: create parent and chunk documents
-            # First, create parent document (stores full content)
+            # First, create parent document (stores full content with hash)
             cursor.execute(
-                'INSERT INTO documents (content, chunk_index, chunk_count) VALUES (?, -1, ?)',
-                (content, len(chunks))
+                'INSERT INTO documents (content, content_hash, chunk_index, chunk_count) VALUES (?, ?, -1, ?)',
+                (content, content_hash, len(chunks))
             )
             parent_id = cursor.lastrowid
 
-            # Then create chunk documents
+            # Then create chunk documents (chunks don't need hash since they're not checked for duplicates)
             for i, chunk in enumerate(chunks):
                 cursor.execute(
                     'INSERT INTO documents (content, chunk_index, parent_doc_id, chunk_count) VALUES (?, ?, ?, ?)',
