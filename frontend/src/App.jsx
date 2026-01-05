@@ -24,7 +24,8 @@ function App() {
     sidebarOpen: false,
     sidebarMode: 'solution-prompt',
     vimEnabled: true,
-    showPromptDiff: false
+    showPromptDiff: false,
+    showRagChunks: false
   })
 
   // Editor/Content state (all editable content)
@@ -46,7 +47,10 @@ function App() {
     currentPrompt: null,
     testCaseLastUpdate: null,
     testCaseCacheHit: false,
-    ragDocCount: 0
+    ragDocCount: 0,
+    ragChunks: [],
+    tokensSent: 0,
+    tokensReceived: 0
   })
 
   // Custom hooks
@@ -96,9 +100,12 @@ function App() {
           similarityScore: currentJob.result.similarity_score || null,
           cachedPrompt: currentJob.result.cached_prompt || null,
           currentPrompt: currentJob.result.current_prompt || null,
-          ragDocCount: currentJob.result.rag_doc_count || 0
+          ragDocCount: currentJob.result.rag_doc_count || 0,
+          ragChunks: currentJob.result.rag_chunks || [],
+          tokensSent: currentJob.result.tokens_sent || 0,
+          tokensReceived: currentJob.result.tokens_received || 0
         }))
-        setUi(prev => ({ ...prev, showPromptDiff: false }))
+        setUi(prev => ({ ...prev, showPromptDiff: false, showRagChunks: false }))
       }
     }
   }, [currentJobStatus, currentJobId, jobs])

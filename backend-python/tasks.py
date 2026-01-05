@@ -75,9 +75,11 @@ def _execute_llm_task(
 
         # Augment prompt with RAG context (if enabled)
         rag_doc_count = 0
+        rag_chunks = []
         if rag_service.is_enabled():
             retrieved_docs = rag_service.retrieve(query=prompt)
             rag_doc_count = len(retrieved_docs)
+            rag_chunks = retrieved_docs
             if retrieved_docs:
                 print(f"[RAG] Found {len(retrieved_docs)} matching documents:")
                 for i, doc in enumerate(retrieved_docs, 1):
@@ -115,7 +117,8 @@ def _execute_llm_task(
                 'cached_prompt': cached_response.get('prompt'),
                 'current_prompt': cached_response.get('current_prompt'),
                 'metadata': cached_response.get('metadata', {}),
-                'rag_doc_count': rag_doc_count
+                'rag_doc_count': rag_doc_count,
+                'rag_chunks': rag_chunks
             }
 
         # Make LLM call
@@ -128,6 +131,12 @@ def _execute_llm_task(
 
         response_text = response.text
 
+        tokens_sent = len(prompt.split())
+        tokens_received = len(response_text.split()) 
+        if hasattr(response, 'usage_metadata'):
+            tokens_sent = response.usage_metadata.prompt_token_count
+            tokens_received = response.usage_metadata.candidates_token_count
+
         # Post-process response if needed
         processed_response = response_text
         if post_processor:
@@ -138,8 +147,8 @@ def _execute_llm_task(
             operation_type=operation_type,
             prompt=prompt,
             response_text=response_text,
-            tokens_sent=len(prompt.split()),
-            tokens_received=len(response_text.split()),
+            tokens_sent=tokens_sent,
+            tokens_received=tokens_received,
             latency_ms=latency_ms,
             metadata=cache_metadata
         )
@@ -160,7 +169,10 @@ def _execute_llm_task(
             response_key: processed_response,
             'from_cache': False,
             'latency_ms': latency_ms,
-            'rag_doc_count': rag_doc_count
+            'rag_doc_count': rag_doc_count,
+            'rag_chunks': rag_chunks,
+            'tokens_sent': tokens_sent,
+            'tokens_received': tokens_received
         }
 
     except Exception as e:
