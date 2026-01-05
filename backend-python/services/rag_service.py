@@ -32,7 +32,7 @@ class RAGService:
 
         self.collection = self.chroma_client.get_or_create_collection(
             name="rag_documents",
-            metadata={"description": "RAG document embeddings"}
+            metadata={"description": "RAG document embeddings", "hnsw:space": "cosine"}
         )
 
     def _get_redis_client(self):
@@ -309,9 +309,9 @@ class RAGService:
                 results['distances'][0],
                 results['metadatas'][0]
             )):
-                # chromaDB returns distance (lower is better), convert to similarity (0-1, higher is better)
-                # use cosine distance: similarity = 1 - (distance / 2)
-                similarity = 1.0 - (distance / 2.0)
+                # chromaDB returns cosine distance (lower is better), convert to similarity (0-1, higher is better)
+                # cosine_similarity = 1 - cosine_distance
+                similarity = 1.0 - distance
 
                 if i < 5:
                     print(f"[RAG DEBUG]   {i+1}. Doc {doc_id}: {similarity:.4f} | {document[:80]}...")
