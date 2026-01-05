@@ -26,7 +26,7 @@ function ResponseMetadata({ metadata, setMetadata, ui, setUi }) {
       )}
       {metadata.ragDocCount !== undefined && (
         <span style={{ marginLeft: '8px', color: metadata.ragDocCount > 0 ? '#4CAF50' : '#999' }}>
-          📚 RAG: {metadata.ragDocCount} doc{metadata.ragDocCount !== 1 ? 's' : ''}
+          📚 RAG: {metadata.ragDocCount} chunk{metadata.ragDocCount !== 1 ? 's' : ''}
         </span>
       )}
     </div>

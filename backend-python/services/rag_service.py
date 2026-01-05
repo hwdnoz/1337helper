@@ -1,13 +1,15 @@
-import sqlite3
 import logging
 import hashlib
 import os
+import uuid
 from typing import List, Dict, Optional
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from datetime import datetime
 import numpy as np
 import redis
-from utils import sqlite_connection, service_error_handler, cache_error_handler
+import chromadb
+from chromadb.config import Settings
+from google import genai
+from utils import service_error_handler, cache_error_handler
 
 logger = logging.getLogger(__name__)
 
@@ -15,13 +17,23 @@ logger = logging.getLogger(__name__)
 class RAGService:
     """RAG service for document retrieval"""
 
-    # Chunking configuration
-    CHUNK_SIZE = 500  # Characters per chunk
-    CHUNK_OVERLAP = 100  # Character overlap between chunks
+    CHUNK_SIZE = 500
+    CHUNK_OVERLAP = 100
 
-    def __init__(self, db_path='data/rag_documents.db'):
-        self.db_path = db_path
-        self._init_database()
+    def __init__(self, chroma_path='data/chroma'):
+        self.chroma_path = chroma_path
+
+        self.genai_client = genai.Client(api_key=os.getenv('GOOGLE_API_KEY'))
+
+        self.chroma_client = chromadb.PersistentClient(
+            path=chroma_path,
+            settings=Settings(anonymized_telemetry=False)
+        )
+
+        self.collection = self.chroma_client.get_or_create_collection(
+            name="rag_documents",
+            metadata={"description": "RAG document embeddings"}
+        )
 
     def _get_redis_client(self):
         """Get Redis client with password authentication"""
@@ -41,28 +53,27 @@ class RAGService:
         r.set(key, '1' if value else '0')
         return value
 
-    def _init_database(self):
-        """Initialize RAG documents database"""
-        with sqlite_connection(self.db_path) as (conn, cursor):
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS documents (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    content TEXT NOT NULL,
-                    content_hash TEXT,
-                    chunk_index INTEGER DEFAULT 0,
-                    parent_doc_id INTEGER,
-                    chunk_count INTEGER DEFAULT 1,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            # Add indexes for efficient chunk queries and deduplication
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_parent_doc ON documents(parent_doc_id)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_chunk_index ON documents(chunk_index)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_content_hash ON documents(content_hash)')
+    def _get_next_id(self) -> int:
+        """Get next available document ID from Redis counter"""
+        r = self._get_redis_client()
+        return r.incr('rag_doc_id_counter')
 
     def _hash_content(self, content: str) -> str:
         """Generate SHA256 hash of content for deduplication"""
         return hashlib.sha256(content.encode()).hexdigest()
+
+    def _generate_embedding(self, text: str) -> List[float]:
+        """Generate embedding using Google's embedding API"""
+
+        try:
+            result = self.genai_client.models.embed_content(
+                model='models/text-embedding-004',
+                contents=[text]
+            )
+            return result.embeddings[0].values
+        except Exception as e:
+            logger.error(f"Error generating embedding: {e}")
+            return [0.0] * 768  # fall back on empty list, text-embedding-004 has 768 dims
 
     def _chunk_text(self, text: str) -> List[str]:
         """Split text into overlapping chunks"""
@@ -73,13 +84,12 @@ class RAGService:
         start = 0
 
         while start < len(text):
-            # Get chunk
+
             end = start + self.CHUNK_SIZE
             chunk = text[start:end]
 
-            # If not at the end and we can split at word boundary, do so
+            # split at word boundary
             if end < len(text) and ' ' in chunk:
-                # Try to break at last space to avoid cutting words
                 last_space = chunk.rfind(' ')
                 if last_space > self.CHUNK_SIZE // 2:  # Only if space is in latter half
                     chunk = chunk[:last_space]
@@ -87,10 +97,8 @@ class RAGService:
 
             chunks.append(chunk.strip())
 
-            # Move start forward, accounting for overlap
             start = end - self.CHUNK_OVERLAP
 
-            # Avoid infinite loop if chunk_size <= overlap
             if start <= len(chunks[-1]) + len(chunks) - 1:
                 start = end
 
@@ -99,128 +107,232 @@ class RAGService:
     @service_error_handler(default_value=None, error_message_prefix="Error adding document")
     def add_document(self, content: str) -> Optional[int]:
         """Add a document to the RAG store, chunking if necessary"""
-        # Calculate content hash for deduplication
         content_hash = self._hash_content(content)
+        created_at = datetime.now().isoformat()
 
-        with sqlite_connection(self.db_path, row_factory=sqlite3.Row) as (conn, cursor):
-            # Check if document with this hash already exists (only check parent/standalone docs)
-            cursor.execute(
-                'SELECT id FROM documents WHERE content_hash = ? AND chunk_index <= 0',
-                (content_hash,)
+        existing = self.collection.get(
+            where={
+                "$and": [
+                    {"content_hash": content_hash},
+                    {"chunk_index": {"$lte": 0}}
+                ]
+            }
+        )
+
+        if existing and len(existing['ids']) > 0:
+            doc_id = int(existing['ids'][0])
+            logger.info(f"Document with hash {content_hash[:8]}... already exists (id={doc_id}), skipping duplicate")
+            return doc_id
+
+        chunks = self._chunk_text(content)
+
+        if len(chunks) == 1:
+            doc_id = self._get_next_id()
+            embedding = self._generate_embedding(content)
+
+            self.collection.add(
+                ids=[str(doc_id)],
+                embeddings=[embedding],
+                documents=[content],
+                metadatas=[{
+                    "content_hash": content_hash,
+                    "chunk_index": 0,
+                    "chunk_count": 1,
+                    "created_at": created_at
+                }]
             )
-            existing = cursor.fetchone()
-            if existing:
-                logger.info(f"Document with hash {content_hash[:8]}... already exists (id={existing['id']}), skipping duplicate")
-                return existing['id']
 
-            # Document is new, proceed with chunking and adding
-            chunks = self._chunk_text(content)
+            return doc_id
 
-            # If single chunk, store as simple document
-            if len(chunks) == 1:
-                cursor.execute(
-                    'INSERT INTO documents (content, content_hash, chunk_index, chunk_count) VALUES (?, ?, 0, 1)',
-                    (content, content_hash)
-                )
-                return cursor.lastrowid
+        # multiple chunks, create parent doc
+        parent_id = self._get_next_id()
+        parent_embedding = self._generate_embedding(content)
 
-            # Multiple chunks: create parent and chunk documents
-            # First, create parent document (stores full content with hash)
-            cursor.execute(
-                'INSERT INTO documents (content, content_hash, chunk_index, chunk_count) VALUES (?, ?, -1, ?)',
-                (content, content_hash, len(chunks))
-            )
-            parent_id = cursor.lastrowid
+        self.collection.add(
+            ids=[str(parent_id)],
+            embeddings=[parent_embedding],
+            documents=[content],
+            metadatas=[{
+                "content_hash": content_hash,
+                "chunk_index": -1,
+                "chunk_count": len(chunks),
+                "created_at": created_at
+            }]
+        )
 
-            # Then create chunk documents (chunks don't need hash since they're not checked for duplicates)
-            for i, chunk in enumerate(chunks):
-                cursor.execute(
-                    'INSERT INTO documents (content, chunk_index, parent_doc_id, chunk_count) VALUES (?, ?, ?, ?)',
-                    (chunk, i, parent_id, len(chunks))
-                )
+        # add chunks
+        chunk_ids = []
+        chunk_embeddings = []
+        chunk_metadatas = []
 
-            return parent_id
+        for i, chunk in enumerate(chunks):
+            chunk_id = self._get_next_id()
+            chunk_ids.append(str(chunk_id))
+
+            embedding = self._generate_embedding(chunk)
+            chunk_embeddings.append(embedding)
+
+            chunk_metadatas.append({
+                "parent_id": parent_id,
+                "chunk_index": i,
+                "chunk_count": len(chunks),
+                "created_at": created_at
+            })
+
+        self.collection.add(
+            ids=chunk_ids,
+            embeddings=chunk_embeddings,
+            documents=chunks,
+            metadatas=chunk_metadatas
+        )
+
+        return parent_id
 
     @service_error_handler(default_value=False, error_message_prefix="Error deleting document")
     def delete_document(self, doc_id: int) -> bool:
         """Delete a document by ID (and all its chunks if it's a parent)"""
-        with sqlite_connection(self.db_path) as (conn, cursor):
-            # Delete the document
-            cursor.execute('DELETE FROM documents WHERE id = ?', (doc_id,))
-            deleted = cursor.rowcount > 0
+        chunks = self.collection.get(
+            where={"parent_id": doc_id}
+        )
 
-            # Also delete any chunks that reference this as parent
-            cursor.execute('DELETE FROM documents WHERE parent_doc_id = ?', (doc_id,))
+        ids_to_delete = [str(doc_id)]
+        if chunks and chunks['ids']:
+            ids_to_delete.extend(chunks['ids'])
 
-            return deleted
+        try:
+            self.collection.delete(ids=ids_to_delete)
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting from ChromaDB: {e}")
+            return False
 
     @service_error_handler(default_value=[], error_message_prefix="Error getting documents")
-    def get_documents(self, limit: Optional[int] = None) -> List[Dict]:
-        """Get documents with optional limit (only returns parent documents or standalone docs, not chunks)"""
-        with sqlite_connection(self.db_path, row_factory=sqlite3.Row) as (conn, cursor):
-            # Only return documents that are parents (chunk_index=-1) or standalone (chunk_index=0 and parent_doc_id IS NULL)
-            if limit:
-                cursor.execute('''
-                    SELECT * FROM documents
-                    WHERE chunk_index <= 0 AND (parent_doc_id IS NULL OR chunk_index = -1)
-                    ORDER BY created_at DESC LIMIT ?
-                ''', (limit,))
-            else:
-                cursor.execute('''
-                    SELECT * FROM documents
-                    WHERE chunk_index <= 0 AND (parent_doc_id IS NULL OR chunk_index = -1)
-                    ORDER BY created_at DESC
-                ''')
-            return [dict(row) for row in cursor.fetchall()]
+    def get_documents(self, limit: Optional[int] = None, show_all: bool = False) -> List[Dict]:
+        """
+        Get documents with optional limit
+
+        Args:
+            limit: Maximum number of documents to return
+            show_all: If True, returns ALL ChromaDB entries including chunks.
+                     If False, returns only parent/standalone documents
+        """
+        if show_all:
+            result = self.collection.get(include=['documents', 'metadatas'])
+        else:
+            # Get only parent/standalone docs (chunk_index <= 0)
+            result = self.collection.get(
+                where={"chunk_index": {"$lte": 0}},
+                include=['documents', 'metadatas']
+            )
+
+        if not result or not result['ids']:
+            return []
+
+        documents = []
+        for i, doc_id in enumerate(result['ids']):
+            metadata = result['metadatas'][i]
+
+            if not show_all and 'parent_id' in metadata:
+                continue
+
+            doc = {
+                'id': int(doc_id),
+                'content': result['documents'][i],
+                'created_at': metadata.get('created_at'),
+                'chunk_count': metadata.get('chunk_count', 1),
+                'chunk_index': metadata.get('chunk_index', 0),
+                'content_hash': metadata.get('content_hash', '')[:12] + '...' if metadata.get('content_hash') else None,
+            }
+
+            if 'parent_id' in metadata:
+                doc['parent_id'] = metadata['parent_id']
+
+            documents.append(doc)
+
+        documents.sort(key=lambda x: x['id'], reverse=False)
+
+        if limit:
+            documents = documents[:limit]
+
+        return documents
 
     def _get_all_documents(self) -> List[Dict]:
         """Get all searchable chunks (excludes parent documents with chunk_index=-1)"""
-        with sqlite_connection(self.db_path, row_factory=sqlite3.Row) as (conn, cursor):
-            # Only return actual chunks (chunk_index >= 0), not parent documents (chunk_index = -1)
-            cursor.execute('SELECT * FROM documents WHERE chunk_index >= 0 ORDER BY created_at DESC')
-            return [dict(row) for row in cursor.fetchall()]
+
+        # get docs where chunk_index >= 0 (actual chunks, not parent docs)
+        result = self.collection.get(
+            where={"chunk_index": {"$gte": 0}},
+            include=['documents', 'metadatas']
+        )
+
+        if not result or not result['ids']:
+            return []
+
+        documents = []
+        for i, doc_id in enumerate(result['ids']):
+            metadata = result['metadatas'][i]
+            documents.append({
+                'id': int(doc_id),
+                'content': result['documents'][i],
+                'created_at': metadata.get('created_at'),
+                'chunk_index': metadata.get('chunk_index', 0),
+                'chunk_count': metadata.get('chunk_count', 1),
+                'parent_id': metadata.get('parent_id')
+            })
+
+        documents.sort(key=lambda x: x['created_at'] if x['created_at'] else '', reverse=True)
+
+        return documents
 
     @service_error_handler(default_value=[], error_message_prefix="Error during retrieval")
     def retrieve(self, query: str, top_k: int = 3, min_similarity: float = 0.6) -> List[Dict]:
         """Retrieve top-k most relevant documents for a query"""
-        documents = self._get_all_documents()
-        if not documents:
+        if self.collection.count() == 0:
+            print("[RAG DEBUG] No documents in ChromaDB collection")
             return []
 
-        # Extract content for vectorization
-        doc_contents = [d['content'] for d in documents]
-        doc_contents.append(query)
+        query_embedding = self._generate_embedding(query)
 
-        # Create TF-IDF vectors
-        vectorizer = TfidfVectorizer(lowercase=True, stop_words='english', max_features=500)
-        tfidf_matrix = vectorizer.fit_transform(doc_contents)
+        results = self.collection.query(
+            query_embeddings=[query_embedding],
+            n_results=top_k * 2,  # get more results to filter by threshold
+            include=['documents', 'distances', 'metadatas']
+        )
 
-        # Calculate cosine similarity
-        similarities = cosine_similarity(tfidf_matrix[-1:], tfidf_matrix[:-1])[0]
+        retrieved_docs = []
+        if results['ids'] and len(results['ids'][0]) > 0:
+            print(f"[RAG DEBUG] Top {min(5, len(results['ids'][0]))} document similarities for query: '{query[:100]}...'")
 
-        # Log top 5 similarity scores for debugging
-        top_5_indices = np.argsort(similarities)[::-1][:5]
-        print(f"[RAG DEBUG] Top 5 document similarities for query: '{query[:100]}...'")
-        for i, idx in enumerate(top_5_indices, 1):
-            if idx < len(documents):
-                print(f"[RAG DEBUG]   {i}. Doc {documents[idx]['id']}: {similarities[idx]:.4f} | {documents[idx]['content'][:80]}...")
+            for i, (doc_id, document, distance, metadata) in enumerate(zip(
+                results['ids'][0],
+                results['documents'][0],
+                results['distances'][0],
+                results['metadatas'][0]
+            )):
+                # chromaDB returns distance (lower is better), convert to similarity (0-1, higher is better)
+                # use cosine distance: similarity = 1 - (distance / 2)
+                similarity = 1.0 - (distance / 2.0)
 
-        # Get top-k indices above threshold
-        valid_indices = np.where(similarities >= min_similarity)[0]
-        if len(valid_indices) == 0:
+                if i < 5:
+                    print(f"[RAG DEBUG]   {i+1}. Doc {doc_id}: {similarity:.4f} | {document[:80]}...")
+
+                # filter by threshold
+                if similarity >= min_similarity:
+                    retrieved_docs.append({
+                        'id': int(doc_id),
+                        'content': document,
+                        'similarity_score': float(similarity),
+                        'metadata': metadata
+                    })
+
+                # stop after top_k
+                if len(retrieved_docs) >= top_k:
+                    break
+
+        if not retrieved_docs:
             print(f"[RAG DEBUG] No documents above similarity threshold {min_similarity}")
-            return []
 
-        top_indices = valid_indices[np.argsort(similarities[valid_indices])[::-1]][:top_k]
-
-        # Build results
-        results = []
-        for idx in top_indices:
-            doc = documents[idx].copy()
-            doc['similarity_score'] = float(similarities[idx])
-            results.append(doc)
-
-        return results
+        return retrieved_docs
 
     def format_context(self, documents: List[Dict], max_length: int = 2000) -> str:
         """Format retrieved documents into context string"""

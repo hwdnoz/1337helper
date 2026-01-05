@@ -91,7 +91,8 @@ def reset_prompt(prompt_name):
 def get_rag_documents():
     """Get all RAG documents"""
     limit = request.args.get('limit', 100, type=int)
-    return {'documents': rag_service.get_documents(limit=limit)}
+    show_all = request.args.get('show_all', 'false').lower() == 'true'
+    return {'success': True, 'documents': rag_service.get_documents(limit=limit, show_all=show_all)}
 
 
 @admin_bp.route('/api/rag/documents', methods=['POST'])
