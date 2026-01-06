@@ -1,5 +1,5 @@
-/* Cache Indicator */
-.cache-indicator {
+/* Response Metadata (cache, RAG, etc.) */
+.response-metadata {
   fontSize: 0.85rem;
   padding: 0.25rem 0.5rem;
   border-radius: 2px;
@@ -9,12 +9,12 @@
   gap: 0.5rem;
 }
 
-.cache-indicator.hit {
+.response-metadata.cache-hit {
   color: #4caf50;
   background: rgba(76, 175, 80, 0.1);
 }
 
-.cache-indicator.miss {
+.response-metadata.cache-miss {
   color: #888;
   background: transparent;
 }

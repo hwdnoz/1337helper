@@ -47,7 +47,7 @@ services:
     env_file:
       - .env
     volumes:
-      - data:/app/data
+      - ./data:/app/data
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -73,7 +73,7 @@ services:
     env_file:
       - .env
     volumes:
-      - data:/app/data
+      - ./data:/app/data
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -122,6 +122,5 @@ services:
       start_period: 10s
 
 volumes:
-  data:
   rabbitmq_data:
   redis_data:

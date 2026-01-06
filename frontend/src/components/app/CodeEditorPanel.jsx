@@ -1,15 +1,15 @@
 import CodeMirror from '@uiw/react-codemirror'
 import { python } from '@codemirror/lang-python'
 import { vim } from '@replit/codemirror-vim'
-import CacheIndicator from './CacheIndicator'
+import ResponseMetadata from './ResponseMetadata'
 
 function CodeEditorPanel({
   content,
   setContent,
   ui,
   setUi,
-  cacheInfo,
-  setCacheInfo,
+  metadata,
+  setMetadata,
   runCode,
   importTestCase,
   clearTestCases
@@ -31,9 +31,9 @@ function CodeEditorPanel({
         <button onClick={clearTestCases}>Clear Test Cases</button>
       </div>
 
-      <CacheIndicator
-        cacheInfo={cacheInfo}
-        setCacheInfo={setCacheInfo}
+      <ResponseMetadata
+        metadata={metadata}
+        setMetadata={setMetadata}
         ui={ui}
         setUi={setUi}
       />

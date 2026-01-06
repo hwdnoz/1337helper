@@ -1,9 +1,6 @@
-FROM python:3.11-slim-bookworm
+FROM python:3.11-bookworm
 
 WORKDIR /app
-
-# need curl for healthcheck
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # for caching
 COPY requirements.txt .

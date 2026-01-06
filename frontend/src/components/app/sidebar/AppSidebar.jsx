@@ -7,7 +7,7 @@ function AppSidebar({
   setUi,
   content,
   setContent,
-  cacheInfo,
+  metadata,
   generateTestCases,
   importTestCase,
   clearTestCases,
@@ -51,7 +51,7 @@ function AppSidebar({
           <TestCasePanel
             content={content}
             setContent={setContent}
-            cacheInfo={cacheInfo}
+            metadata={metadata}
             generateTestCases={generateTestCases}
             importTestCase={importTestCase}
             clearTestCases={clearTestCases}

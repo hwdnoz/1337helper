@@ -4,6 +4,7 @@ from typing import Optional, Callable, Dict, Any
 from celery_app import celery_app
 from google import genai
 from services import logger, cache
+from services.rag_service import rag_service
 from prompts.loader import PromptLoader
 
 # Configure Google AI
@@ -42,15 +43,16 @@ def _execute_llm_task(
     model_aware_cache: bool = True
 ) -> Dict[str, Any]:
     """
-    Generic LLM task execution with caching, logging, and error handling.
+    Generic LLM task execution with RAG, caching, logging, and error handling.
 
     This function consolidates the common pattern used across all LLM tasks:
-    1. Check cache
-    2. Make API call if not cached
-    3. Post-process response (optional)
-    4. Log metrics
-    5. Save to cache
-    6. Handle errors
+    1. Augment prompt with RAG context
+    2. Check cache
+    3. Make API call if not cached
+    4. Post-process response (optional)
+    5. Log metrics
+    6. Save to cache
+    7. Handle errors
 
     Args:
         prompt: The prompt to send to the LLM
@@ -70,6 +72,26 @@ def _execute_llm_task(
         if cache_metadata is None:
             cache_metadata = {}
         cache_metadata['model'] = current_model
+
+        # Augment prompt with RAG context (if enabled)
+        rag_doc_count = 0
+        rag_chunks = []
+        if rag_service.is_enabled():
+            retrieved_docs = rag_service.retrieve(query=prompt)
+            rag_doc_count = len(retrieved_docs)
+            rag_chunks = retrieved_docs
+            if retrieved_docs:
+                print(f"[RAG] Found {len(retrieved_docs)} matching documents:")
+                for i, doc in enumerate(retrieved_docs, 1):
+                    similarity = doc.get('similarity_score', 0)
+                    content_preview = doc.get('content', '')[:100]
+                    print(f"[RAG]   {i}. Similarity: {similarity:.4f} | Preview: {content_preview}...")
+                context = rag_service.format_context(retrieved_docs)
+                prompt = f"{prompt}\n\n{context}"
+            else:
+                print("[RAG] No matching documents found in RAG system")
+        else:
+            print("[RAG] RAG is disabled, skipping document retrieval")
 
         # Check cache
         cached_response = cache.get(
@@ -94,7 +116,9 @@ def _execute_llm_task(
                 'similarity_score': cached_response.get('similarity_score'),
                 'cached_prompt': cached_response.get('prompt'),
                 'current_prompt': cached_response.get('current_prompt'),
-                'metadata': cached_response.get('metadata', {})
+                'metadata': cached_response.get('metadata', {}),
+                'rag_doc_count': rag_doc_count,
+                'rag_chunks': rag_chunks
             }
 
         # Make LLM call
@@ -107,6 +131,12 @@ def _execute_llm_task(
 
         response_text = response.text
 
+        tokens_sent = len(prompt.split())
+        tokens_received = len(response_text.split()) 
+        if hasattr(response, 'usage_metadata'):
+            tokens_sent = response.usage_metadata.prompt_token_count
+            tokens_received = response.usage_metadata.candidates_token_count
+
         # Post-process response if needed
         processed_response = response_text
         if post_processor:
@@ -117,8 +147,8 @@ def _execute_llm_task(
             operation_type=operation_type,
             prompt=prompt,
             response_text=response_text,
-            tokens_sent=len(prompt.split()),
-            tokens_received=len(response_text.split()),
+            tokens_sent=tokens_sent,
+            tokens_received=tokens_received,
             latency_ms=latency_ms,
             metadata=cache_metadata
         )
@@ -138,7 +168,11 @@ def _execute_llm_task(
             'success': True,
             response_key: processed_response,
             'from_cache': False,
-            'latency_ms': latency_ms
+            'latency_ms': latency_ms,
+            'rag_doc_count': rag_doc_count,
+            'rag_chunks': rag_chunks,
+            'tokens_sent': tokens_sent,
+            'tokens_received': tokens_received
         }
 
     except Exception as e:

@@ -41,6 +41,15 @@ function AdminHeader({ showDbDropdown, setShowDbDropdown, onRefresh, navigate, o
               >
                 💾 Cache Database
               </div>
+              <div
+                className="dropdown-item"
+                onClick={() => {
+                  navigate('/admin/rag-database')
+                  setShowDbDropdown(false)
+                }}
+              >
+                🧠 RAG Database
+              </div>
             </div>
           )}
         </div>
