@@ -1,0 +1,1189 @@
+{
+  "timestamp": "2026-01-06 16:22:48",
+  "test_cases": [
+    {
+      "name": "Context Split Across Chunks",
+      "query": "How do I skip duplicate elements in a two-pointer solution?",
+      "completeness": 1.0,
+      "completeness_details": {
+        "found_count": 17,
+        "expected_count": 17,
+        "found_keywords": [
+          "nums[left-1]",
+          "skip",
+          "while",
+          "duplicate",
+          "left < right",
+          "sort",
+          "two-pointer",
+          "triplet",
+          "three-sum",
+          "optimization",
+          "increment",
+          "decrement",
+          "sorted array",
+          "O(n\u00b2)",
+          "nums[i]",
+          "valid triplet",
+          "after finding"
+        ],
+        "missing_keywords": []
+      },
+      "precision": 0.2,
+      "chunk_retrieval_rate": 1.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 3,
+        "total_retrieved": 15,
+        "total_document_chunks": 3,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 808,
+            "parent_id": 807,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 807,
+            "parent_id": null,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 809,
+            "parent_id": 807,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 831,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 832,
+            "parent_id": 831,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 833,
+            "parent_id": 831,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 828,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 829,
+            "parent_id": 828,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 821,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 823,
+            "parent_id": 821,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 811,
+            "parent_id": 810,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 810,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 822,
+            "parent_id": 821,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 815,
+            "parent_id": 813,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 813,
+            "parent_id": null,
+            "is_relevant": false
+          }
+        ],
+        "expected_parent_ids": [
+          807
+        ]
+      },
+      "avg_similarity": 0.5598059180573962
+    },
+    {
+      "name": "Code Reference Resolution",
+      "query": "Show me the helper function for palindrome checking",
+      "completeness": 1.0,
+      "completeness_details": {
+        "found_count": 19,
+        "expected_count": 19,
+        "found_keywords": [
+          "def is_palindrome",
+          "return",
+          "[::-1]",
+          "clean",
+          "isalnum",
+          "lower",
+          "helper function",
+          "string",
+          "reverse",
+          "c.lower()",
+          "clean ==",
+          "O(n)",
+          "case-insensitive",
+          "alphanumeric",
+          "join",
+          "reusable",
+          "utility",
+          "edge cases",
+          "slice notation"
+        ],
+        "missing_keywords": []
+      },
+      "precision": 0.75,
+      "chunk_retrieval_rate": 1.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 3,
+        "total_retrieved": 4,
+        "total_document_chunks": 3,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 810,
+            "parent_id": null,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 811,
+            "parent_id": 810,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 812,
+            "parent_id": 810,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 833,
+            "parent_id": 831,
+            "is_relevant": false
+          }
+        ],
+        "expected_parent_ids": [
+          810
+        ]
+      },
+      "avg_similarity": 0.6463724691597006
+    },
+    {
+      "name": "Specific Detail Retrieval",
+      "query": "What's the time complexity of the sliding window approach?",
+      "completeness": 1.0,
+      "completeness_details": {
+        "found_count": 22,
+        "expected_count": 22,
+        "found_keywords": [
+          "O(n)",
+          "time",
+          "complexity",
+          "sliding window",
+          "efficient",
+          "window",
+          "left pointer",
+          "right pointer",
+          "contiguous",
+          "array",
+          "string",
+          "brute force",
+          "technique",
+          "pattern",
+          "expand",
+          "shrink",
+          "dynamic",
+          "subarray",
+          "substring",
+          "maximum sum",
+          "optimization",
+          "template"
+        ],
+        "missing_keywords": []
+      },
+      "precision": 0.25,
+      "chunk_retrieval_rate": 1.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 3,
+        "total_retrieved": 12,
+        "total_document_chunks": 3,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 815,
+            "parent_id": 813,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 814,
+            "parent_id": 813,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 813,
+            "parent_id": null,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 825,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 826,
+            "parent_id": 825,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 809,
+            "parent_id": 807,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 821,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 839,
+            "parent_id": 837,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 837,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 816,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 822,
+            "parent_id": 821,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 827,
+            "parent_id": 825,
+            "is_relevant": false
+          }
+        ],
+        "expected_parent_ids": [
+          813
+        ]
+      },
+      "avg_similarity": 0.5746430696499881
+    },
+    {
+      "name": "Similar but Different",
+      "query": "How is QuickSort different from MergeSort?",
+      "completeness": 0.9047619047619048,
+      "completeness_details": {
+        "found_count": 19,
+        "expected_count": 21,
+        "found_keywords": [
+          "in-place",
+          "divide",
+          "pivot",
+          "stable",
+          "QuickSort",
+          "MergeSort",
+          "conquer",
+          "space",
+          "memory",
+          "O(n log n)",
+          "worst case",
+          "average",
+          "sorting",
+          "comparison",
+          "guarantee",
+          "recursive",
+          "element",
+          "preserve",
+          "order"
+        ],
+        "missing_keywords": [
+          "partition",
+          "auxiliary"
+        ]
+      },
+      "precision": 0.5714285714285714,
+      "chunk_retrieval_rate": 1.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 4,
+        "total_retrieved": 7,
+        "total_document_chunks": 4,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 817,
+            "parent_id": 816,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 816,
+            "parent_id": null,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 819,
+            "parent_id": 816,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 818,
+            "parent_id": 816,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 825,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 826,
+            "parent_id": 825,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 822,
+            "parent_id": 821,
+            "is_relevant": false
+          }
+        ],
+        "expected_parent_ids": [
+          816
+        ]
+      },
+      "avg_similarity": 0.6695796456695613
+    },
+    {
+      "name": "Dynamic Programming Approach",
+      "query": "What's the difference between memoization and tabulation?",
+      "completeness": 0.95,
+      "completeness_details": {
+        "found_count": 19,
+        "expected_count": 20,
+        "found_keywords": [
+          "top-down",
+          "bottom-up",
+          "recursion",
+          "iteration",
+          "memoization",
+          "tabulation",
+          "cache",
+          "table",
+          "DP",
+          "dynamic programming",
+          "subproblem",
+          "recursive",
+          "iterative",
+          "base case",
+          "memo",
+          "array",
+          "stack",
+          "fibonacci",
+          "optimal"
+        ],
+        "missing_keywords": [
+          "dictionary"
+        ]
+      },
+      "precision": 0.25,
+      "chunk_retrieval_rate": 1.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 1,
+        "total_retrieved": 4,
+        "total_document_chunks": 1,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 820,
+            "parent_id": null,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 829,
+            "parent_id": 828,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 828,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 830,
+            "parent_id": 828,
+            "is_relevant": false
+          }
+        ],
+        "expected_parent_ids": [
+          820
+        ]
+      },
+      "avg_similarity": 0.6073920815246807
+    },
+    {
+      "name": "Implementation Pitfall",
+      "query": "What's the overflow bug in binary search?",
+      "completeness": 0.6842105263157895,
+      "completeness_details": {
+        "found_count": 13,
+        "expected_count": 19,
+        "found_keywords": [
+          "mid",
+          "overflow",
+          "left + (right - left)",
+          "// 2",
+          "binary search",
+          "(left + right)",
+          "bug",
+          "avoid",
+          "calculation",
+          "correct",
+          "common mistake",
+          "implementation",
+          "pitfall"
+        ],
+        "missing_keywords": [
+          "integer overflow",
+          "midpoint",
+          "large integers",
+          "index",
+          "safer",
+          "prevention"
+        ]
+      },
+      "precision": 0.5,
+      "chunk_retrieval_rate": 1.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 3,
+        "total_retrieved": 6,
+        "total_document_chunks": 3,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 822,
+            "parent_id": 821,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 821,
+            "parent_id": null,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 823,
+            "parent_id": 821,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 827,
+            "parent_id": 825,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 825,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 826,
+            "parent_id": 825,
+            "is_relevant": false
+          }
+        ],
+        "expected_parent_ids": [
+          821
+        ]
+      },
+      "avg_similarity": 0.5832948115034047
+    },
+    {
+      "name": "Algorithm Selection",
+      "query": "When should I use BFS instead of DFS?",
+      "completeness": 0.8181818181818182,
+      "completeness_details": {
+        "found_count": 18,
+        "expected_count": 22,
+        "found_keywords": [
+          "shortest path",
+          "level",
+          "queue",
+          "unweighted",
+          "BFS",
+          "DFS",
+          "breadth-first",
+          "depth-first",
+          "graph",
+          "tree",
+          "traversal",
+          "distance",
+          "neighbors",
+          "search",
+          "choice",
+          "when to use",
+          "applications",
+          "stack"
+        ],
+        "missing_keywords": [
+          "FIFO",
+          "layer",
+          "decision",
+          "criteria"
+        ]
+      },
+      "precision": 0.14285714285714285,
+      "chunk_retrieval_rate": 1.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 1,
+        "total_retrieved": 7,
+        "total_document_chunks": 1,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 824,
+            "parent_id": null,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 836,
+            "parent_id": 834,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 834,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 835,
+            "parent_id": 834,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 837,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 820,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 838,
+            "parent_id": 837,
+            "is_relevant": false
+          }
+        ],
+        "expected_parent_ids": [
+          824
+        ]
+      },
+      "avg_similarity": 0.5872838589095192
+    },
+    {
+      "name": "Complexity Classification",
+      "query": "Which sorting algorithms have O(n log n) complexity?",
+      "completeness": 0.9444444444444444,
+      "completeness_details": {
+        "found_count": 17,
+        "expected_count": 18,
+        "found_keywords": [
+          "merge sort",
+          "heap sort",
+          "quick sort",
+          "average",
+          "O(n log n)",
+          "time complexity",
+          "worst case",
+          "best case",
+          "Big O",
+          "sorting",
+          "algorithm",
+          "comparison",
+          "divide and conquer",
+          "efficient",
+          "logarithmic",
+          "performance",
+          "analysis"
+        ],
+        "missing_keywords": [
+          "classification"
+        ]
+      },
+      "precision": 0.23076923076923078,
+      "chunk_retrieval_rate": 1.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 3,
+        "total_retrieved": 13,
+        "total_document_chunks": 3,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 817,
+            "parent_id": 816,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 819,
+            "parent_id": 816,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 816,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 818,
+            "parent_id": 816,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 825,
+            "parent_id": null,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 827,
+            "parent_id": 825,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 826,
+            "parent_id": 825,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 822,
+            "parent_id": 821,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 828,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 821,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 830,
+            "parent_id": 828,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 829,
+            "parent_id": 828,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 809,
+            "parent_id": 807,
+            "is_relevant": false
+          }
+        ],
+        "expected_parent_ids": [
+          825
+        ]
+      },
+      "avg_similarity": 0.5779257462866005
+    },
+    {
+      "name": "Data Structure Pattern",
+      "query": "How do I use a hash table to solve two sum?",
+      "completeness": 0.8181818181818182,
+      "completeness_details": {
+        "found_count": 18,
+        "expected_count": 22,
+        "found_keywords": [
+          "complement",
+          "seen",
+          "target -",
+          "O(1)",
+          "hash table",
+          "two sum",
+          "lookup",
+          "pattern",
+          "pair",
+          "array",
+          "nums[i]",
+          "hash map",
+          "efficient",
+          "solution",
+          "store",
+          "check",
+          "linear",
+          "O(n)"
+        ],
+        "missing_keywords": [
+          "dictionary",
+          "constant time",
+          "indices",
+          "target - nums[i]"
+        ]
+      },
+      "precision": 0.23076923076923078,
+      "chunk_retrieval_rate": 1.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 3,
+        "total_retrieved": 13,
+        "total_document_chunks": 3,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 829,
+            "parent_id": 828,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 828,
+            "parent_id": null,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 830,
+            "parent_id": 828,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 807,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 808,
+            "parent_id": 807,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 809,
+            "parent_id": 807,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 815,
+            "parent_id": 813,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 820,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 813,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 821,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 822,
+            "parent_id": 821,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 825,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 814,
+            "parent_id": 813,
+            "is_relevant": false
+          }
+        ],
+        "expected_parent_ids": [
+          828
+        ]
+      },
+      "avg_similarity": 0.5725998431540004
+    },
+    {
+      "name": "Pointer Technique",
+      "query": "How do you find the middle of a linked list with fast and slow pointers?",
+      "completeness": 0.8636363636363636,
+      "completeness_details": {
+        "found_count": 19,
+        "expected_count": 22,
+        "found_keywords": [
+          "slow",
+          "fast",
+          "fast.next.next",
+          "slow.next",
+          "linked list",
+          "two pointers",
+          "middle",
+          "node",
+          "pointer",
+          "technique",
+          "Floyd",
+          "cycle",
+          "advance",
+          "move",
+          "traverse",
+          "head",
+          "while",
+          "algorithm",
+          "pattern"
+        ],
+        "missing_keywords": [
+          "tortoise",
+          "hare",
+          "null"
+        ]
+      },
+      "precision": 0.21428571428571427,
+      "chunk_retrieval_rate": 1.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 3,
+        "total_retrieved": 14,
+        "total_document_chunks": 3,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 832,
+            "parent_id": 831,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 831,
+            "parent_id": null,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 833,
+            "parent_id": 831,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 822,
+            "parent_id": 821,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 807,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 808,
+            "parent_id": 807,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 821,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 823,
+            "parent_id": 821,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 818,
+            "parent_id": 816,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 816,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 836,
+            "parent_id": 834,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 834,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 809,
+            "parent_id": 807,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 835,
+            "parent_id": 834,
+            "is_relevant": false
+          }
+        ],
+        "expected_parent_ids": [
+          831
+        ]
+      },
+      "avg_similarity": 0.5559790784350321
+    },
+    {
+      "name": "Tree Traversal Type",
+      "query": "What traversal gives me nodes in sorted order for a BST?",
+      "completeness": 0.8095238095238095,
+      "completeness_details": {
+        "found_count": 17,
+        "expected_count": 21,
+        "found_keywords": [
+          "inorder",
+          "left",
+          "root",
+          "right",
+          "sorted",
+          "BST",
+          "binary search tree",
+          "traversal",
+          "order",
+          "property",
+          "recursive",
+          "visit",
+          "node",
+          "tree",
+          "structure",
+          "algorithm",
+          "elements"
+        ],
+        "missing_keywords": [
+          "ascending",
+          "LNR",
+          "in-order",
+          "sequence"
+        ]
+      },
+      "precision": 0.2727272727272727,
+      "chunk_retrieval_rate": 1.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 3,
+        "total_retrieved": 11,
+        "total_document_chunks": 3,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 835,
+            "parent_id": 834,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 834,
+            "parent_id": null,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 836,
+            "parent_id": 834,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 824,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 821,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 822,
+            "parent_id": 821,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 837,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 817,
+            "parent_id": 816,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 839,
+            "parent_id": 837,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 816,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 838,
+            "parent_id": 837,
+            "is_relevant": false
+          }
+        ],
+        "expected_parent_ids": [
+          834
+        ]
+      },
+      "avg_similarity": 0.5686040986619945
+    },
+    {
+      "name": "Problem-Solving Template",
+      "query": "What's the backtracking template for generating combinations?",
+      "completeness": 0.9130434782608695,
+      "completeness_details": {
+        "found_count": 21,
+        "expected_count": 23,
+        "found_keywords": [
+          "is_solution",
+          "candidate",
+          "backtrack",
+          "remove",
+          "template",
+          "recursive",
+          "combinations",
+          "base case",
+          "choice",
+          "constraint",
+          "state",
+          "undo",
+          "backtracking",
+          "pattern",
+          "structure",
+          "function",
+          "result",
+          "append",
+          "pop",
+          "generate",
+          "valid"
+        ],
+        "missing_keywords": [
+          "prune",
+          "explore"
+        ]
+      },
+      "precision": 0.1875,
+      "chunk_retrieval_rate": 1.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 3,
+        "total_retrieved": 16,
+        "total_document_chunks": 3,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 838,
+            "parent_id": 837,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 837,
+            "parent_id": null,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 839,
+            "parent_id": 837,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 836,
+            "parent_id": 834,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 834,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 835,
+            "parent_id": 834,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 809,
+            "parent_id": 807,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 829,
+            "parent_id": 828,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 814,
+            "parent_id": 813,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 811,
+            "parent_id": 810,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 810,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 820,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 813,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 812,
+            "parent_id": 810,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 830,
+            "parent_id": 828,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 828,
+            "parent_id": null,
+            "is_relevant": false
+          }
+        ],
+        "expected_parent_ids": [
+          837
+        ]
+      },
+      "avg_similarity": 0.5495138470425776
+    }
+  ],
+  "summary": {
+    "avg_completeness": 0.8921653469422348,
+    "avg_precision": 0.3166947635697636,
+    "avg_chunk_retrieval_rate": 1.0,
+    "avg_similarity": 0.5877495390045381,
+    "avg_latency_ms": 270.2625830968221
+  }
+}
