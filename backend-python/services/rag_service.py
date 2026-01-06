@@ -11,16 +11,25 @@ from chromadb.config import Settings
 from google import genai
 from utils import service_error_handler, cache_error_handler
 
+from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.schema import Document as LlamaDocument
+
 logger = logging.getLogger(__name__)
 
 
 class RAGService:
-    """RAG service for document retrieval"""
+    """RAG service for document retrieval with LlamaIndex-powered chunking"""
 
-    CHUNK_SIZE = 200
-    CHUNK_OVERLAP = 50
+    CHUNK_SIZE = 512
+    CHUNK_OVERLAP = 128
 
-    def __init__(self, chroma_path='data/chroma'):
+    def __init__(self, chroma_path=None):
+        if chroma_path is None:
+            current_dir = os.path.dirname(os.path.abspath(__file__))  # services/
+            backend_dir = os.path.dirname(current_dir)  # backend-python/
+            project_root = os.path.dirname(backend_dir)  # 1337helper/
+            chroma_path = os.path.join(project_root, 'data', 'chroma')
+
         self.chroma_path = chroma_path
 
         self.genai_client = genai.Client(api_key=os.getenv('GOOGLE_API_KEY'))
@@ -35,28 +44,64 @@ class RAGService:
             metadata={"description": "RAG document embeddings", "hnsw:space": "cosine"}
         )
 
+        # sentence splitter for intelligent chunking
+        self.text_splitter = SentenceSplitter(
+            chunk_size=self.CHUNK_SIZE,
+            chunk_overlap=self.CHUNK_OVERLAP,
+            paragraph_separator="\n\n",  # paragraph boundaries
+            secondary_chunking_regex="[^,.;。？！]+[,.;。？！]?",  # sentence boundaries
+            separator=" ",  # word boundaries
+        )
+
+        self._local_id_counter = 0 # fallback when redis unavailable
+
     def _get_redis_client(self):
         """Get Redis client with password authentication"""
-        password = os.environ.get('REDIS_PASSWORD', '')
-        return redis.Redis(host='redis', port=6379, db=1,
-                          password=password, decode_responses=True)
+        try:
+            password = os.environ.get('REDIS_PASSWORD', '')
+            client = redis.Redis(host='redis', port=6379, db=1,
+                              password=password, decode_responses=True)
+            client.ping() # test
+            return client
+        except Exception as e:
+            logger.warning(f"Redis not available: {e}. Using local counter.")
+            return None
 
     def _get_redis_bool(self, key, default=True):
         """Get boolean value from Redis (stored as '1'/'0')"""
         r = self._get_redis_client()
-        value = r.get(key)
-        return value == '1' if value is not None else default
+        if r is None:
+            return default
+        try:
+            value = r.get(key)
+            return value == '1' if value is not None else default
+        except:
+            return default
 
     def _set_redis_bool(self, key, value):
         """Set boolean value in Redis (stored as '1'/'0')"""
         r = self._get_redis_client()
-        r.set(key, '1' if value else '0')
+        if r is None:
+            return value
+        try:
+            r.set(key, '1' if value else '0')
+        except:
+            pass
         return value
 
     def _get_next_id(self) -> int:
-        """Get next available document ID from Redis counter"""
+        """Get next available document ID from Redis counter (or local counter if Redis unavailable)"""
         r = self._get_redis_client()
-        return r.incr('rag_doc_id_counter')
+        if r is None:
+            # local counter
+            self._local_id_counter += 1
+            return self._local_id_counter
+        try:
+            return r.incr('rag_doc_id_counter')
+        except:
+            # fallback to local counter
+            self._local_id_counter += 1
+            return self._local_id_counter
 
     def _hash_content(self, content: str) -> str:
         """Generate SHA256 hash of content for deduplication"""
@@ -76,33 +121,27 @@ class RAGService:
             return [0.0] * 768  # fall back on empty list, text-embedding-004 has 768 dims
 
     def _chunk_text(self, text: str) -> List[str]:
-        """Split text into overlapping chunks"""
+        """
+        Split text into intelligent overlapping chunks using LlamaIndex SentenceSplitter
+
+        semantic-aware chunking:
+        - respects sentence boundaries
+        - preserves paragraph structure
+        - maintains word boundaries
+        - provides better context preservation with larger, smarter chunks
+        """
         if len(text) <= self.CHUNK_SIZE:
             return [text]
 
-        chunks = []
-        start = 0
+        llama_doc = LlamaDocument(text=text)
 
-        while start < len(text):
+        nodes = self.text_splitter.get_nodes_from_documents([llama_doc])
 
-            end = start + self.CHUNK_SIZE
-            chunk = text[start:end]
+        chunks = [node.get_content() for node in nodes] # extract text
 
-            # split at word boundary
-            if end < len(text) and ' ' in chunk:
-                last_space = chunk.rfind(' ')
-                if last_space > self.CHUNK_SIZE // 2:  # Only if space is in latter half
-                    chunk = chunk[:last_space]
-                    end = start + last_space
+        chunks = [chunk.strip() for chunk in chunks if chunk.strip()] # filter empty out
 
-            chunks.append(chunk.strip())
-
-            start = end - self.CHUNK_OVERLAP
-
-            if start <= len(chunks[-1]) + len(chunks) - 1:
-                start = end
-
-        return chunks
+        return chunks if chunks else [text]
 
     @service_error_handler(default_value=None, error_message_prefix="Error adding document")
     def add_document(self, content: str) -> Optional[int]:
