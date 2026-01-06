@@ -1,4 +1,4 @@
-.PHONY: help local-start local-stop docker-frontend docker-backend docker-start docker-stop docker-logs-backend docker-logs-frontend docker-remove-containers docker-remove-images compose-up compose-down compose-clear compose-reload-frontend test
+.PHONY: help local-start local-stop docker-frontend docker-backend docker-start docker-stop docker-logs-backend docker-logs-frontend docker-remove-containers docker-remove-images compose-up compose-down compose-clear compose-reload-frontend test benchmark
 
 .DEFAULT_GOAL := help
 
@@ -12,6 +12,7 @@ help:
 	@echo "  make local-start          - Start backend and frontend locally"
 	@echo "  make local-stop           - Stop local processes"
 	@echo "  make test                 - Run integration tests against API"
+	@echo "  make benchmark            - Run RAG benchmark (saves to backend-python/benchmark_results/)"
 	@echo ""
 	@echo "Docker (Individual Containers):"
 	@echo "  make docker-backend       - Build and start backend container"
@@ -91,12 +92,23 @@ compose-clear:
 compose-reload-frontend:
 	docker-compose up -d --build frontend
 
+compose-reload-celery:
+	docker-compose up -d --build celery-worker
+
 test:
 	@echo "Running pytest unit tests..."
 	@cd backend-python && source ../venv/bin/activate && pytest tests/test_api.py -v
 	@echo ""
 	@echo "Running integration tests..."
 	@./backend-python/tests/test_api.sh http://localhost:5102
+
+benchmark:
+	@echo "Running RAG benchmark in celery-worker container..."
+	@docker-compose exec celery-worker python benchmark_rag.py
+	@echo ""
+	@echo "Benchmark complete! Results saved to data/benchmark_results/"
+	@echo "Latest result:"
+	@ls -lht data/benchmark_results/ | head -n 2 | tail -n 1
 
 # use below with care; uncoment to use;
 # will stop and remove all containers, images, and volumes including those unrelated to this application

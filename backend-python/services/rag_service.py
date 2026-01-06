@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 class RAGService:
     """RAG service for document retrieval"""
 
-    CHUNK_SIZE = 500
-    CHUNK_OVERLAP = 100
+    CHUNK_SIZE = 200
+    CHUNK_OVERLAP = 50
 
     def __init__(self, chroma_path='data/chroma'):
         self.chroma_path = chroma_path
@@ -285,7 +285,7 @@ class RAGService:
         return documents
 
     @service_error_handler(default_value=[], error_message_prefix="Error during retrieval")
-    def retrieve(self, query: str, top_k: int = 3, min_similarity: float = 0.6) -> List[Dict]:
+    def retrieve(self, query: str, top_k: int = 20, min_similarity: float = 0.5) -> List[Dict]:
         """Retrieve top-k most relevant documents for a query"""
         if self.collection.count() == 0:
             print("[RAG DEBUG] No documents in ChromaDB collection")
@@ -295,7 +295,7 @@ class RAGService:
 
         results = self.collection.query(
             query_embeddings=[query_embedding],
-            n_results=top_k * 2,  # get more results to filter by threshold
+            n_results=top_k,  # get up to top_k results to filter by threshold
             include=['documents', 'distances', 'metadatas']
         )
 
@@ -324,10 +324,6 @@ class RAGService:
                         'similarity_score': float(similarity),
                         'metadata': metadata
                     })
-
-                # stop after top_k
-                if len(retrieved_docs) >= top_k:
-                    break
 
         if not retrieved_docs:
             print(f"[RAG DEBUG] No documents above similarity threshold {min_similarity}")
