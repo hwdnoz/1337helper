@@ -1,6 +1,7 @@
 import TestCasePanel from './TestCasePanel'
 import LLMPromptPanel from './LLMPromptPanel'
 import SolutionPromptPanel from './SolutionPromptPanel'
+import InterviewerPanel from './InterviewerPanel'
 
 function AppSidebar({
   ui,
@@ -38,6 +39,7 @@ function AppSidebar({
             {ui.sidebarMode === 'test-case' && 'Test Cases'}
             {ui.sidebarMode === 'llm-prompt' && 'LLM Prompt'}
             {ui.sidebarMode === 'solution-prompt' && 'Solution Prompt Manager'}
+            {ui.sidebarMode === 'interviewer' && 'Interviewer'}
           </h2>
           <button
             className="sidebar-close"
@@ -85,6 +87,11 @@ function AppSidebar({
             startJob={startJob}
           />
         )}
+
+        {ui.sidebarMode === 'interviewer' && (
+          <InterviewerPanel />
+        )}
+
       </div>
     </>
   )

@@ -1,20 +1,32 @@
 import os
+import logging
 from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
 
 load_dotenv()
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()  # Output to stdout for Docker
+    ]
+)
+
 app = Flask(__name__)
 CORS(app)
 
 # Import and register blueprints
 from routes import admin_bp, cache_bp, code_bp, jobs_bp
+from routes.interviewer_routes import interviewer_bp
 
 app.register_blueprint(admin_bp)
 app.register_blueprint(cache_bp)
 app.register_blueprint(code_bp)
 app.register_blueprint(jobs_bp)
+app.register_blueprint(interviewer_bp)
 
 @app.route('/health')
 def health():

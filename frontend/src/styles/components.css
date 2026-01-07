@@ -169,3 +169,183 @@
   border: 2px solid #1177bb;
   font-weight: 600;
 }
+
+/* Interviewer Panel */
+.interviewer-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: radial-gradient(circle at top, rgba(20, 34, 54, 0.45), transparent 60%);
+  flex: 1;
+  min-height: 0;
+}
+
+.interviewer-panel--empty {
+  padding: 20px;
+}
+
+.interviewer-panel__intro {
+  margin-bottom: 15px;
+  color: #cbd5f5;
+  font-size: 0.9rem;
+}
+
+.interviewer-panel__primary-btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 0.9rem;
+  background: #2563eb;
+  color: #f8fafc;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.interviewer-panel__primary-btn:hover {
+  background: #1d4ed8;
+}
+
+.interviewer-panel__messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 18px 10px;
+  min-height: 0;
+}
+
+.interviewer-panel__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px 0;
+  font-size: 0.8rem;
+  color: #cbd5f5;
+}
+
+.interviewer-panel__status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+}
+
+.interviewer-panel__message {
+  margin-bottom: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  border: 1px solid transparent;
+}
+
+.interviewer-panel__message--interviewer {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-color: #1f2a44;
+}
+
+.interviewer-panel__message--user {
+  background: #0b3b5e;
+  color: #e0f2fe;
+  border-color: #12507a;
+}
+
+.interviewer-panel__message--hint {
+  background: #2c2013;
+  color: #fef3c7;
+  border-color: #6b4b1d;
+}
+
+.interviewer-panel__message-label {
+  font-weight: 700;
+  margin-bottom: 6px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+}
+
+.interviewer-panel__message-text {
+  line-height: 1.45;
+}
+
+.interviewer-panel__composer {
+  padding: 14px 16px;
+  border-top: 1px solid #1f2937;
+  background: #0b1220;
+}
+
+.interviewer-panel__input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  min-height: 72px;
+  resize: vertical;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.interviewer-panel__input::placeholder {
+  color: #94a3b8;
+}
+
+.interviewer-panel__input:focus {
+  outline: none;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+.interviewer-panel__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.interviewer-panel__send-btn {
+  flex: 1;
+  padding: 9px 12px;
+  font-size: 0.85rem;
+  background: #22c55e;
+  color: #0b1120;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.interviewer-panel__send-btn:hover {
+  background: #16a34a;
+}
+
+.interviewer-panel__hint-btn {
+  padding: 9px 12px;
+  font-size: 0.85rem;
+  background: #f59e0b;
+  color: #1f1300;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.interviewer-panel__hint-btn:disabled {
+  background: #374151;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.interviewer-panel__end-btn {
+  padding: 9px 12px;
+  font-size: 0.85rem;
+  background: #1f2937;
+  color: #f8fafc;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.interviewer-panel__end-btn:hover {
+  background: #111827;
+}

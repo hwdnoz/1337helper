@@ -22,6 +22,12 @@ function Header({ ui, toggleSidebar, navigate }) {
         >
           Solution Prompt
         </button>
+        <button
+          className={`sidebar-toggle-btn ${ui.sidebarOpen && ui.sidebarMode === 'interviewer' ? 'active' : ''}`}
+          onClick={() => toggleSidebar('interviewer')}
+        >
+          Interviewer
+        </button>
         <button className="sidebar-toggle-btn" onClick={() => navigate('/admin')}>
           Admin
         </button>
