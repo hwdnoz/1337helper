@@ -23,36 +23,65 @@ export default function InterviewerPanel() {
   const sendMessage = async () => {
     if (!input.trim() || !sessionId) return
 
-    const newMessages = [...messages, { role: 'user', text: input }]
+    const userMessage = input
+    const newMessages = [...messages, { role: 'user', text: userMessage }]
     setMessages(newMessages)
     setInput('')
     setStatus('Interviewer is thinking...')
 
-    const res = await fetch(`${API_URL}/api/interviewer/chat`, {
+    // Use Server-Sent Events for streaming
+    const res = await fetch(`${API_URL}/api/interviewer/chat-stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session_id: sessionId, message: input })
+      body: JSON.stringify({ session_id: sessionId, message: userMessage })
     })
-    const data = await res.json()
-    const nextMessages = [...newMessages]
-    let toolNames = []
-    if (Array.isArray(data.tool_messages)) {
-      toolNames = data.tool_messages.map((toolMessage) => toolMessage.role)
-      data.tool_messages.forEach((toolMessage) => {
-        nextMessages.push({ role: toolMessage.role, text: toolMessage.text })
-      })
+
+    if (!res.ok) {
+      setStatus('Error: Failed to connect')
+      return
     }
-    nextMessages.push({ role: 'interviewer', text: data.message })
-    setMessages(nextMessages)
-    if (toolNames.length) {
-      const uniqueTools = [...new Set(toolNames)]
-      setStatus(`Tools used: ${uniqueTools.join(', ')}`)
-      setTimeout(() => setStatus(''), 2000)
-    } else {
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n\n')
+        buffer = lines.pop() // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.trim() || !line.startsWith('data: ')) continue
+
+          const jsonStr = line.replace('data: ', '')
+          try {
+            const event = JSON.parse(jsonStr)
+
+            if (event.type === 'tool') {
+              // Add tool message immediately
+              setMessages(prev => [...prev, { role: event.role, text: event.text }])
+              setHintsUsed(event.hints_used)
+              // Keep "thinking..." status
+            } else if (event.type === 'final') {
+              // Add final message and clear status
+              setMessages(prev => [...prev, { role: 'interviewer', text: event.text }])
+              setHintsUsed(event.hints_used)
+              setStatus('')
+            } else if (event.type === 'error') {
+              setStatus(`Error: ${event.text}`)
+            }
+          } catch (e) {
+            console.error('Failed to parse SSE event:', e)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Stream reading error:', error)
       setStatus('')
-    }
-    if (typeof data.hints_used === 'number') {
-      setHintsUsed(data.hints_used)
     }
   }
 

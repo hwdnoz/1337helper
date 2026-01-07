@@ -35,16 +35,12 @@ class InterviewerAgent:
         logger.info(f"Opening message: {opening}")
         return opening
 
-    def run(self, problem: str, messages: list, hints_used: int, max_iterations: int = 5):
+    def run_stream(self, problem: str, messages: list, hints_used: int, max_iterations: int = 5):
         """
-        Agent loop:
-        - Calls the LLM
-        - Executes tools if requested
-        - Feeds tool results back into the loop
-        - Stops on FINAL or max_iterations
+        Streaming version of agent loop - yields events as they happen.
+        Yields dicts with 'type': 'tool' or 'final'
         """
-        logger.info(f"Starting agent run for problem: {problem}, hints_used: {hints_used}")
-        tool_messages = []
+        logger.info(f"Starting streaming agent run for problem: {problem}, hints_used: {hints_used}")
         scripted_actions = [
             {"type": "tool", "name": "hint", "count": 1},
             {"type": "tool", "name": "edge_cases", "count": 1},
@@ -74,8 +70,15 @@ class InterviewerAgent:
                 )
                 logger.info(f"Tool result: {tool_results}")
                 role = "hint" if tool_name == "hint" else "interviewer"
+
                 for tool_result in tool_results:
-                    tool_messages.append({"role": role, "text": tool_result})
+                    yield {
+                        "type": "tool",
+                        "role": role,
+                        "text": tool_result,
+                        "hints_used": hints_used
+                    }
+
                 messages.append({"role": "assistant", "content": response})
                 messages.append({"role": "tool", "content": "\n".join(tool_results)})
                 continue
@@ -83,12 +86,21 @@ class InterviewerAgent:
             final_text = action["content"]
             logger.info(f"Agent returning final response: {final_text}")
             messages.append({"role": "assistant", "content": final_text})
-            return final_text, hints_used, tool_messages
+            yield {
+                "type": "final",
+                "text": final_text,
+                "hints_used": hints_used
+            }
+            return
 
         fallback = "Max iterations reached. Can you summarize your approach?"
         logger.warning(f"Max iterations reached for problem: {problem}")
         messages.append({"role": "assistant", "content": fallback})
-        return fallback, hints_used, tool_messages
+        yield {
+            "type": "final",
+            "text": fallback,
+            "hints_used": hints_used
+        }
 
     def give_hint(self, problem: str, hints_used: int):
         logger.info(f"give_hint called directly: problem={problem}, hints_used={hints_used}")

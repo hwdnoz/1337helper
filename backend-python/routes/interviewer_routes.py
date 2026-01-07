@@ -2,7 +2,8 @@
 
 import uuid
 import logging
-from flask import Blueprint, request, jsonify
+import json
+from flask import Blueprint, request, jsonify, Response, stream_with_context
 
 from agents.interviewer_agent import InterviewerAgent
 
@@ -30,13 +31,15 @@ def start():
     return jsonify({'session_id': session_id, 'message': opening})
 
 
-@interviewer_bp.route('/chat', methods=['POST'])
-def chat():
+@interviewer_bp.route('/chat-stream', methods=['POST'])
+def chat_stream():
+    """Streaming version of chat endpoint using Server-Sent Events"""
     try:
-        session_id = request.json['session_id']
-        user_message = request.json['message']
+        data = request.json
+        session_id = data['session_id']
+        user_message = data['message']
 
-        logger.info(f"Chat request - session_id: {session_id}, message: {user_message}")
+        logger.info(f"Chat stream request - session_id: {session_id}, message: {user_message}")
 
         session = sessions.get(session_id)
         if not session:
@@ -49,29 +52,54 @@ def chat():
             for m in session["messages"]
         ]
 
-        logger.info(f"Calling interviewer.run with {len(messages)} messages")
-        response, hints_used, tool_messages = interviewer.run(
-            session['problem'],
-            messages,
-            session['hints_used']
+        def generate():
+            """Generator function for SSE streaming"""
+            try:
+                logger.info(f"Starting stream for session {session_id}")
+
+                for event in interviewer.run_stream(
+                    session['problem'],
+                    messages,
+                    session['hints_used']
+                ):
+                    # Update session state
+                    session['hints_used'] = event['hints_used']
+
+                    if event['type'] == 'tool':
+                        # Add tool message to session
+                        session['messages'].append({
+                            'role': event['role'],
+                            'text': event['text']
+                        })
+                        # Send SSE event
+                        yield f"data: {json.dumps(event)}\n\n"
+
+                    elif event['type'] == 'final':
+                        # Add final response to session
+                        session['messages'].append({
+                            'role': 'assistant',
+                            'text': event['text']
+                        })
+                        # Send final SSE event
+                        yield f"data: {json.dumps(event)}\n\n"
+
+                logger.info(f"Stream completed for session {session_id}")
+            except Exception as e:
+                logger.error(f"Error in stream generator: {str(e)}", exc_info=True)
+                error_event = {"type": "error", "text": str(e)}
+                yield f"data: {json.dumps(error_event)}\n\n"
+
+        return Response(
+            stream_with_context(generate()),
+            mimetype='text/event-stream',
+            headers={
+                'Cache-Control': 'no-cache',
+                'X-Accel-Buffering': 'no'  # Disable nginx buffering
+            }
         )
 
-        session['hints_used'] = hints_used
-        for tool_message in tool_messages:
-            session['messages'].append({
-                'role': tool_message['role'],
-                'text': tool_message['text']
-            })
-        session['messages'].append({'role': 'assistant', 'text': response})
-
-        logger.info(f"Chat response: {response}")
-        return jsonify({
-            'message': response,
-            'hints_used': session['hints_used'],
-            'tool_messages': tool_messages
-        })
     except Exception as e:
-        logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)
+        logger.error(f"Error in chat-stream endpoint: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
