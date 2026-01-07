@@ -41,21 +41,11 @@ class InterviewerAgent:
         Yields dicts with 'type': 'tool' or 'final'
         """
         logger.info(f"Starting streaming agent run for problem: {problem}, hints_used: {hints_used}")
-        scripted_actions = [
-            {"type": "tool", "name": "hint", "count": 1},
-            {"type": "tool", "name": "edge_cases", "count": 1},
-            {"type": "tool", "name": "complexity", "count": 1}
-        ]
         for iteration in range(max_iterations):
             logger.info(f"Agent iteration {iteration + 1}/{max_iterations}")
-            if iteration < len(scripted_actions):
-                action = scripted_actions[iteration]
-                response = f"TOOL: {action['name']}"
-                logger.info(f"Scripted response: {response}")
-            else:
-                action = {"type": "final", "content": "Thanks! Please proceed with your solution."}
-                response = "FINAL: Thanks! Please proceed with your solution."
-                logger.info(f"Scripted response: {response}")
+            response = self._call_llm(problem, messages)
+            logger.info(f"LLM response: {response}")
+            action = self._parse_response(response)
             logger.info(f"Parsed action: {action}")
 
             if action["type"] == "tool":
