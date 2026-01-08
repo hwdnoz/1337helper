@@ -32,7 +32,13 @@ export default defineConfig({
       template: 'treemap' // Options: treemap, sunburst, network
     })
   ],
-  server: { port: 3101 },
+  server: {
+    port: 3101,
+    host: '0.0.0.0', // allow access from outside container
+    watch: {
+      usePolling: true // enable polling for docker volumes
+    }
+  },
   build: {
     // Enable minification
     minify: 'terser',
