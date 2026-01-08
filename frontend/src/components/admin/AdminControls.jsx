@@ -1,185 +1,64 @@
 import { useState } from 'react'
 
-function AdminControls({
-  currentModel,
-  availableModels,
-  cacheEnabled,
-  modelAwareCache,
-  semanticCacheEnabled,
-  ragEnabled,
-  prompts,
-  onModelChange,
-  onToggleCache,
-  onToggleModelAwareCache,
-  onToggleSemanticCache,
-  onToggleRag,
-  onPromptSelect
-}) {
-  const [showPromptDropdown, setShowPromptDropdown] = useState(false)
+const btnStyle = {
+  color: '#fff', border: 'none', padding: '0.5rem 1rem',
+  borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '500'
+}
 
-  const formatPromptName = (name) => {
-    return name.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-  }
+const ToggleBtn = ({ onClick, enabled, activeColor, label, title }) => (
+  <button onClick={onClick} style={{ ...btnStyle, background: enabled ? activeColor : '#616161' }} title={title}>
+    {label}: {enabled ? 'ON' : 'OFF'}
+  </button>
+)
+
+function AdminControls({ currentModel, availableModels, cacheEnabled, modelAwareCache,
+  semanticCacheEnabled, ragEnabled, prompts, onModelChange, onToggleCache,
+  onToggleModelAwareCache, onToggleSemanticCache, onToggleRag, onPromptSelect }) {
+  const [showPromptDropdown, setShowPromptDropdown] = useState(false)
+  const formatPromptName = (name) => name.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+
   return (
-    <div style={{
-      background: '#1e1e1e',
-      border: '1px solid #3e3e42',
-      borderRadius: '4px',
-      padding: '1rem',
-      marginBottom: '1.5rem',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '1rem',
-      flexWrap: 'wrap'
-    }}>
+    <div style={{ background: '#1e1e1e', border: '1px solid #3e3e42', borderRadius: '4px',
+      padding: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <label style={{ fontSize: '0.9rem', color: '#888', minWidth: '50px' }}>Model:</label>
-        <select
-          value={currentModel}
-          onChange={(e) => onModelChange(e.target.value)}
-          style={{
-            background: '#2d2d30',
-            color: '#d4d4d4',
-            border: '1px solid #3e3e42',
-            padding: '0.5rem 0.8rem',
-            borderRadius: '4px',
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            minWidth: '180px'
-          }}
-        >
-          {availableModels.map(model => (
-            <option key={model} value={model}>{model}</option>
-          ))}
+        <select value={currentModel} onChange={(e) => onModelChange(e.target.value)}
+          style={{ background: '#2d2d30', color: '#d4d4d4', border: '1px solid #3e3e42',
+            padding: '0.5rem 0.8rem', borderRadius: '4px', fontSize: '0.85rem', cursor: 'pointer', minWidth: '180px' }}>
+          {availableModels.map(model => <option key={model} value={model}>{model}</option>)}
         </select>
       </div>
 
-      <button
-        onClick={onToggleCache}
-        style={{
-          background: cacheEnabled ? '#2e7d32' : '#c62828',
-          color: '#fff',
-          border: 'none',
-          padding: '0.5rem 1rem',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontSize: '0.85rem',
-          fontWeight: '500'
-        }}
-      >
+      <button onClick={onToggleCache} style={{ ...btnStyle, background: cacheEnabled ? '#2e7d32' : '#c62828' }}>
         Cache: {cacheEnabled ? 'ON' : 'OFF'}
       </button>
 
-      <button
-        onClick={onToggleModelAwareCache}
-        style={{
-          background: modelAwareCache ? '#1976d2' : '#616161',
-          color: '#fff',
-          border: 'none',
-          padding: '0.5rem 1rem',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontSize: '0.85rem',
-          fontWeight: '500'
-        }}
-        title={modelAwareCache ? 'Each model has separate cache' : 'All models share the same cache'}
-      >
-        Model-Aware: {modelAwareCache ? 'ON' : 'OFF'}
-      </button>
+      <ToggleBtn onClick={onToggleModelAwareCache} enabled={modelAwareCache} activeColor="#1976d2" label="Model-Aware"
+        title={modelAwareCache ? 'Each model has separate cache' : 'All models share the same cache'} />
 
-      <button
-        onClick={onToggleSemanticCache}
-        style={{
-          background: semanticCacheEnabled ? '#9c27b0' : '#616161',
-          color: '#fff',
-          border: 'none',
-          padding: '0.5rem 1rem',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontSize: '0.85rem',
-          fontWeight: '500'
-        }}
-        title={semanticCacheEnabled ? 'Use semantic search to find similar cached prompts' : 'Only exact matches will use cache'}
-      >
-        Semantic Cache: {semanticCacheEnabled ? 'ON' : 'OFF'}
-      </button>
+      <ToggleBtn onClick={onToggleSemanticCache} enabled={semanticCacheEnabled} activeColor="#9c27b0" label="Semantic Cache"
+        title={semanticCacheEnabled ? 'Use semantic search to find similar cached prompts' : 'Only exact matches will use cache'} />
 
-      <button
-        onClick={onToggleRag}
-        style={{
-          background: ragEnabled ? '#ff6f00' : '#616161',
-          color: '#fff',
-          border: 'none',
-          padding: '0.5rem 1rem',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontSize: '0.85rem',
-          fontWeight: '500'
-        }}
-        title={ragEnabled ? 'Augment prompts with relevant documents from RAG' : 'RAG disabled - no document retrieval'}
-      >
-        RAG: {ragEnabled ? 'ON' : 'OFF'}
-      </button>
+      <ToggleBtn onClick={onToggleRag} enabled={ragEnabled} activeColor="#ff6f00" label="RAG"
+        title={ragEnabled ? 'Augment prompts with relevant documents from RAG' : 'RAG disabled - no document retrieval'} />
 
       <div style={{ position: 'relative' }}>
-        <button
-          onClick={() => setShowPromptDropdown(!showPromptDropdown)}
-          style={{
-            background: '#6a1b9a',
-            color: '#fff',
-            border: 'none',
-            padding: '0.5rem 1rem',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '0.85rem',
-            fontWeight: '500'
-          }}
-        >
-          Edit Prompts ▼
-        </button>
+        <button onClick={() => setShowPromptDropdown(!showPromptDropdown)}
+          style={{ ...btnStyle, background: '#6a1b9a' }}>Edit Prompts ▼</button>
         {showPromptDropdown && (
-          <div style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            marginTop: '0.5rem',
-            background: '#2d2d30',
-            border: '1px solid #3e3e42',
-            borderRadius: '4px',
-            minWidth: '200px',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
-            zIndex: 1000
-          }}>
+          <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '0.5rem', background: '#2d2d30',
+            border: '1px solid #3e3e42', borderRadius: '4px', minWidth: '200px', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', zIndex: 1000 }}>
             {prompts.map(prompt => (
-              <div
-                key={prompt.name}
-                onClick={() => {
-                  onPromptSelect(prompt.name)
-                  setShowPromptDropdown(false)
-                }}
-                style={{
-                  padding: '0.75rem 1rem',
-                  cursor: 'pointer',
-                  borderBottom: '1px solid #3e3e42',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
+              <div key={prompt.name} onClick={() => { onPromptSelect(prompt.name); setShowPromptDropdown(false) }}
+                style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid #3e3e42',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                 onMouseEnter={(e) => e.target.style.background = '#37373d'}
-                onMouseLeave={(e) => e.target.style.background = 'transparent'}
-              >
+                onMouseLeave={(e) => e.target.style.background = 'transparent'}>
                 <span style={{ fontSize: '0.85rem' }}>{formatPromptName(prompt.name)}</span>
                 {prompt.is_edited && (
-                  <span style={{
-                    background: '#ff9800',
-                    color: '#000',
-                    padding: '0.15rem 0.4rem',
-                    borderRadius: '3px',
-                    fontSize: '0.7rem',
-                    fontWeight: '600'
-                  }}>
-                    EDITED
-                  </span>
+                  <span style={{ background: '#ff9800', color: '#000', padding: '0.15rem 0.4rem',
+                    borderRadius: '3px', fontSize: '0.7rem', fontWeight: '600' }}>EDITED</span>
                 )}
               </div>
             ))}
