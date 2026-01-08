@@ -5,10 +5,10 @@ function Header({ ui, toggleSidebar, navigate }) {
 
       <div className="sidebar-toggles">
         <button
-          className={`sidebar-toggle-btn ${ui.sidebarOpen && ui.sidebarMode === 'test-case' ? 'active' : ''}`}
-          onClick={() => toggleSidebar('test-case')}
+          className={`sidebar-toggle-btn ${ui.sidebarOpen && ui.sidebarMode === 'solution-prompt' ? 'active' : ''}`}
+          onClick={() => toggleSidebar('solution-prompt')}
         >
-          Test Cases
+          Solution Prompt
         </button>
         <button
           className={`sidebar-toggle-btn ${ui.sidebarOpen && ui.sidebarMode === 'llm-prompt' ? 'active' : ''}`}
@@ -17,10 +17,10 @@ function Header({ ui, toggleSidebar, navigate }) {
           LLM Prompt
         </button>
         <button
-          className={`sidebar-toggle-btn ${ui.sidebarOpen && ui.sidebarMode === 'solution-prompt' ? 'active' : ''}`}
-          onClick={() => toggleSidebar('solution-prompt')}
+          className={`sidebar-toggle-btn ${ui.sidebarOpen && ui.sidebarMode === 'test-case' ? 'active' : ''}`}
+          onClick={() => toggleSidebar('test-case')}
         >
-          Solution Prompt
+          Test Cases
         </button>
         <button
           className={`sidebar-toggle-btn ${ui.sidebarOpen && ui.sidebarMode === 'interviewer' ? 'active' : ''}`}

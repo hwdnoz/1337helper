@@ -93,8 +93,17 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: http://localhost:5102
+        # set FRONTEND_MODE=prod to build/serve production assets
+        MODE: ${FRONTEND_MODE:-dev}
     ports:
       - "5101:3101"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:5102
+      # set FRONTEND_MODE=prod to run production
+      - MODE=${FRONTEND_MODE:-dev}
     depends_on:
       backend:
         condition: service_healthy
