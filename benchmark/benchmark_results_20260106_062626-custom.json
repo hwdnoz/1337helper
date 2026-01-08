@@ -1,0 +1,757 @@
+{
+  "timestamp": "2026-01-06 06:26:06",
+  "test_cases": [
+    {
+      "name": "Context Split Across Chunks",
+      "query": "How do I skip duplicate elements in a two-pointer solution?",
+      "completeness": 0.0,
+      "completeness_details": {
+        "found_count": 0,
+        "expected_count": 17,
+        "found_keywords": [],
+        "missing_keywords": [
+          "nums[left-1]",
+          "skip",
+          "while",
+          "duplicate",
+          "left < right",
+          "sort",
+          "two-pointer",
+          "triplet",
+          "three-sum",
+          "optimization",
+          "increment",
+          "decrement",
+          "sorted array",
+          "O(n\u00b2)",
+          "nums[i]",
+          "valid triplet",
+          "after finding"
+        ]
+      },
+      "precision": 0,
+      "chunk_retrieval_rate": 0.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 0,
+        "total_retrieved": 0,
+        "total_document_chunks": 21,
+        "expected_docs": 1,
+        "retrieved_chunks": [],
+        "expected_parent_ids": [
+          762
+        ]
+      },
+      "avg_similarity": 0.0
+    },
+    {
+      "name": "Code Reference Resolution",
+      "query": "Show me the helper function for palindrome checking",
+      "completeness": 0.7368421052631579,
+      "completeness_details": {
+        "found_count": 14,
+        "expected_count": 19,
+        "found_keywords": [
+          "def is_palindrome",
+          "return",
+          "[::-1]",
+          "clean",
+          "isalnum",
+          "lower",
+          "helper function",
+          "string",
+          "c.lower()",
+          "clean ==",
+          "join",
+          "reusable",
+          "utility",
+          "edge cases"
+        ],
+        "missing_keywords": [
+          "reverse",
+          "O(n)",
+          "case-insensitive",
+          "alphanumeric",
+          "slice notation"
+        ]
+      },
+      "precision": 0.3,
+      "chunk_retrieval_rate": 0.13043478260869565,
+      "precision_recall_details": {
+        "relevant_retrieved": 3,
+        "total_retrieved": 10,
+        "total_document_chunks": 23,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 269,
+            "parent_id": 258,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 552,
+            "parent_id": 531,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 804,
+            "parent_id": 783,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 241,
+            "parent_id": 239,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 263,
+            "parent_id": 258,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 534,
+            "parent_id": 531,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 786,
+            "parent_id": 783,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 801,
+            "parent_id": 783,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 549,
+            "parent_id": 531,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 239,
+            "parent_id": null,
+            "is_relevant": false
+          }
+        ],
+        "expected_parent_ids": [
+          783
+        ]
+      },
+      "avg_similarity": 0.548802855407003
+    },
+    {
+      "name": "Specific Detail Retrieval",
+      "query": "What's the time complexity of the sliding window approach?",
+      "completeness": 0.2727272727272727,
+      "completeness_details": {
+        "found_count": 6,
+        "expected_count": 22,
+        "found_keywords": [
+          "O(n)",
+          "time",
+          "complexity",
+          "sliding window",
+          "window",
+          "array"
+        ],
+        "missing_keywords": [
+          "efficient",
+          "left pointer",
+          "right pointer",
+          "contiguous",
+          "string",
+          "brute force",
+          "technique",
+          "pattern",
+          "expand",
+          "shrink",
+          "dynamic",
+          "subarray",
+          "substring",
+          "maximum sum",
+          "optimization",
+          "template"
+        ]
+      },
+      "precision": 0.6666666666666666,
+      "chunk_retrieval_rate": 0.07407407407407407,
+      "precision_recall_details": {
+        "relevant_retrieved": 2,
+        "total_retrieved": 3,
+        "total_document_chunks": 27,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 567,
+            "parent_id": 554,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 569,
+            "parent_id": 554,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 299,
+            "parent_id": 283,
+            "is_relevant": false
+          }
+        ],
+        "expected_parent_ids": [
+          554
+        ]
+      },
+      "avg_similarity": 0.5503222246964773
+    },
+    {
+      "name": "Similar but Different",
+      "query": "How is QuickSort different from MergeSort?",
+      "completeness": 0.9047619047619048,
+      "completeness_details": {
+        "found_count": 19,
+        "expected_count": 21,
+        "found_keywords": [
+          "in-place",
+          "divide",
+          "pivot",
+          "stable",
+          "QuickSort",
+          "MergeSort",
+          "conquer",
+          "space",
+          "memory",
+          "O(n log n)",
+          "worst case",
+          "average",
+          "sorting",
+          "comparison",
+          "guarantee",
+          "recursive",
+          "element",
+          "preserve",
+          "order"
+        ],
+        "missing_keywords": [
+          "partition",
+          "auxiliary"
+        ]
+      },
+      "precision": 0.38461538461538464,
+      "chunk_retrieval_rate": 0.15625,
+      "precision_recall_details": {
+        "relevant_retrieved": 5,
+        "total_retrieved": 13,
+        "total_document_chunks": 32,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 313,
+            "parent_id": 312,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 246,
+            "parent_id": 245,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 582,
+            "parent_id": 581,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 245,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 339,
+            "parent_id": 312,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 312,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 581,
+            "parent_id": null,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 337,
+            "parent_id": 312,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 247,
+            "parent_id": 245,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 609,
+            "parent_id": 581,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 606,
+            "parent_id": 581,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 607,
+            "parent_id": 581,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 320,
+            "parent_id": 312,
+            "is_relevant": false
+          }
+        ],
+        "expected_parent_ids": [
+          581
+        ]
+      },
+      "avg_similarity": 0.6024611225494971
+    },
+    {
+      "name": "Dynamic Programming Approach",
+      "query": "What's the difference between memoization and tabulation?",
+      "completeness": 0.95,
+      "completeness_details": {
+        "found_count": 19,
+        "expected_count": 20,
+        "found_keywords": [
+          "top-down",
+          "bottom-up",
+          "recursion",
+          "iteration",
+          "memoization",
+          "tabulation",
+          "cache",
+          "table",
+          "DP",
+          "dynamic programming",
+          "subproblem",
+          "recursive",
+          "iterative",
+          "base case",
+          "memo",
+          "array",
+          "stack",
+          "fibonacci",
+          "optimal"
+        ],
+        "missing_keywords": [
+          "dictionary"
+        ]
+      },
+      "precision": 0.5,
+      "chunk_retrieval_rate": 0.125,
+      "precision_recall_details": {
+        "relevant_retrieved": 2,
+        "total_retrieved": 4,
+        "total_document_chunks": 16,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 616,
+            "parent_id": 613,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 349,
+            "parent_id": 346,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 346,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 613,
+            "parent_id": null,
+            "is_relevant": true
+          }
+        ],
+        "expected_parent_ids": [
+          613
+        ]
+      },
+      "avg_similarity": 0.5537951737642288
+    },
+    {
+      "name": "Implementation Pitfall",
+      "query": "What's the overflow bug in binary search?",
+      "completeness": 0.0,
+      "completeness_details": {
+        "found_count": 0,
+        "expected_count": 19,
+        "found_keywords": [],
+        "missing_keywords": [
+          "mid",
+          "overflow",
+          "left + (right - left)",
+          "// 2",
+          "binary search",
+          "integer overflow",
+          "midpoint",
+          "(left + right)",
+          "bug",
+          "avoid",
+          "large integers",
+          "calculation",
+          "index",
+          "correct",
+          "safer",
+          "common mistake",
+          "implementation",
+          "pitfall",
+          "prevention"
+        ]
+      },
+      "precision": 0,
+      "chunk_retrieval_rate": 0.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 0,
+        "total_retrieved": 0,
+        "total_document_chunks": 16,
+        "expected_docs": 1,
+        "retrieved_chunks": [],
+        "expected_parent_ids": [
+          629
+        ]
+      },
+      "avg_similarity": 0.0
+    },
+    {
+      "name": "Algorithm Selection",
+      "query": "When should I use BFS instead of DFS?",
+      "completeness": 0.7272727272727273,
+      "completeness_details": {
+        "found_count": 16,
+        "expected_count": 22,
+        "found_keywords": [
+          "shortest path",
+          "level",
+          "queue",
+          "unweighted",
+          "BFS",
+          "DFS",
+          "breadth-first",
+          "depth-first",
+          "graph",
+          "traversal",
+          "distance",
+          "neighbors",
+          "search",
+          "when to use",
+          "applications",
+          "stack"
+        ],
+        "missing_keywords": [
+          "tree",
+          "FIFO",
+          "layer",
+          "choice",
+          "decision",
+          "criteria"
+        ]
+      },
+      "precision": 0.4,
+      "chunk_retrieval_rate": 0.125,
+      "precision_recall_details": {
+        "relevant_retrieved": 2,
+        "total_retrieved": 5,
+        "total_document_chunks": 16,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 399,
+            "parent_id": 382,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 383,
+            "parent_id": 382,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 382,
+            "parent_id": null,
+            "is_relevant": false
+          },
+          {
+            "chunk_id": 645,
+            "parent_id": null,
+            "is_relevant": true
+          },
+          {
+            "chunk_id": 646,
+            "parent_id": 645,
+            "is_relevant": true
+          }
+        ],
+        "expected_parent_ids": [
+          645
+        ]
+      },
+      "avg_similarity": 0.562921792268753
+    },
+    {
+      "name": "Complexity Classification",
+      "query": "Which sorting algorithms have O(n log n) complexity?",
+      "completeness": 0.3888888888888889,
+      "completeness_details": {
+        "found_count": 7,
+        "expected_count": 18,
+        "found_keywords": [
+          "merge sort",
+          "heap sort",
+          "quick sort",
+          "average",
+          "O(n log n)",
+          "sorting",
+          "efficient"
+        ],
+        "missing_keywords": [
+          "time complexity",
+          "worst case",
+          "best case",
+          "Big O",
+          "algorithm",
+          "comparison",
+          "divide and conquer",
+          "logarithmic",
+          "classification",
+          "performance",
+          "analysis"
+        ]
+      },
+      "precision": 1.0,
+      "chunk_retrieval_rate": 0.05,
+      "precision_recall_details": {
+        "relevant_retrieved": 1,
+        "total_retrieved": 1,
+        "total_document_chunks": 20,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 668,
+            "parent_id": 661,
+            "is_relevant": true
+          }
+        ],
+        "expected_parent_ids": [
+          661
+        ]
+      },
+      "avg_similarity": 0.5063666105270386
+    },
+    {
+      "name": "Data Structure Pattern",
+      "query": "How do I use a hash table to solve two sum?",
+      "completeness": 0.0,
+      "completeness_details": {
+        "found_count": 0,
+        "expected_count": 22,
+        "found_keywords": [],
+        "missing_keywords": [
+          "complement",
+          "seen",
+          "target -",
+          "O(1)",
+          "hash table",
+          "dictionary",
+          "two sum",
+          "lookup",
+          "constant time",
+          "pattern",
+          "pair",
+          "indices",
+          "array",
+          "nums[i]",
+          "target - nums[i]",
+          "hash map",
+          "efficient",
+          "solution",
+          "store",
+          "check",
+          "linear",
+          "O(n)"
+        ]
+      },
+      "precision": 0,
+      "chunk_retrieval_rate": 0.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 0,
+        "total_retrieved": 0,
+        "total_document_chunks": 20,
+        "expected_docs": 1,
+        "retrieved_chunks": [],
+        "expected_parent_ids": [
+          681
+        ]
+      },
+      "avg_similarity": 0.0
+    },
+    {
+      "name": "Pointer Technique",
+      "query": "How do you find the middle of a linked list with fast and slow pointers?",
+      "completeness": 0.0,
+      "completeness_details": {
+        "found_count": 0,
+        "expected_count": 22,
+        "found_keywords": [],
+        "missing_keywords": [
+          "slow",
+          "fast",
+          "fast.next.next",
+          "slow.next",
+          "linked list",
+          "two pointers",
+          "middle",
+          "node",
+          "tortoise",
+          "hare",
+          "pointer",
+          "technique",
+          "Floyd",
+          "cycle",
+          "advance",
+          "move",
+          "traverse",
+          "head",
+          "while",
+          "null",
+          "algorithm",
+          "pattern"
+        ]
+      },
+      "precision": 0,
+      "chunk_retrieval_rate": 0.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 0,
+        "total_retrieved": 0,
+        "total_document_chunks": 19,
+        "expected_docs": 1,
+        "retrieved_chunks": [],
+        "expected_parent_ids": [
+          701
+        ]
+      },
+      "avg_similarity": 0.0
+    },
+    {
+      "name": "Tree Traversal Type",
+      "query": "What traversal gives me nodes in sorted order for a BST?",
+      "completeness": 0.0,
+      "completeness_details": {
+        "found_count": 0,
+        "expected_count": 21,
+        "found_keywords": [],
+        "missing_keywords": [
+          "inorder",
+          "left",
+          "root",
+          "right",
+          "sorted",
+          "BST",
+          "binary search tree",
+          "traversal",
+          "order",
+          "ascending",
+          "property",
+          "recursive",
+          "visit",
+          "node",
+          "LNR",
+          "in-order",
+          "tree",
+          "structure",
+          "algorithm",
+          "sequence",
+          "elements"
+        ]
+      },
+      "precision": 0,
+      "chunk_retrieval_rate": 0.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 0,
+        "total_retrieved": 0,
+        "total_document_chunks": 20,
+        "expected_docs": 1,
+        "retrieved_chunks": [],
+        "expected_parent_ids": [
+          720
+        ]
+      },
+      "avg_similarity": 0.0
+    },
+    {
+      "name": "Problem-Solving Template",
+      "query": "What's the backtracking template for generating combinations?",
+      "completeness": 0.2608695652173913,
+      "completeness_details": {
+        "found_count": 6,
+        "expected_count": 23,
+        "found_keywords": [
+          "is_solution",
+          "candidate",
+          "backtrack",
+          "template",
+          "constraint",
+          "backtracking"
+        ],
+        "missing_keywords": [
+          "remove",
+          "recursive",
+          "combinations",
+          "base case",
+          "choice",
+          "prune",
+          "state",
+          "undo",
+          "explore",
+          "pattern",
+          "structure",
+          "function",
+          "result",
+          "append",
+          "pop",
+          "generate",
+          "valid"
+        ]
+      },
+      "precision": 0.0,
+      "chunk_retrieval_rate": 0.0,
+      "precision_recall_details": {
+        "relevant_retrieved": 0,
+        "total_retrieved": 1,
+        "total_document_chunks": 22,
+        "expected_docs": 1,
+        "retrieved_chunks": [
+          {
+            "chunk_id": 490,
+            "parent_id": 486,
+            "is_relevant": false
+          }
+        ],
+        "expected_parent_ids": [
+          740
+        ]
+      },
+      "avg_similarity": 0.5324295163154602
+    }
+  ],
+  "summary": {
+    "avg_completeness": 0.3534468720109452,
+    "avg_precision": 0.2709401709401709,
+    "avg_chunk_retrieval_rate": 0.05506323805689748,
+    "avg_similarity": 0.32142494129403815,
+    "avg_latency_ms": 203.4497062365214
+  }
+}
