@@ -2,6 +2,19 @@
 RAG System Benchmark - Compare Current vs LlamaIndex
 
 Run this before and after implementing LlamaIndex to measure improvements.
+
+Note: 
+chunk_retrieval_rate is an interesting metric. It measures how much of the
+relevant document was actually retrieved by the RAG system. It isn't a metric
+meant to identify if RAG system has great quality but moreso how much of the
+document is being identified as relevant. For chunking strategies that end up
+chunking docs into fewer chunks, the metric tends to hit 100% with high top_k
+values. For example, if a doc is split into 2 chunks, but rag is instructed to
+identify 20 top_k chunks, more than likely both chunks will be retrieved. So 
+100% of the document will be found. But if a doc is split with a chunking 
+strategy tht chunks into 20 parts, then a much lower value will be returned.
+It's just a reference to measure how much relevant is getting added into the 
+LLM prompts.
 """
 
 import time

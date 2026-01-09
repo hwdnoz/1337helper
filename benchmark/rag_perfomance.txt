@@ -1,0 +1,13 @@
+RAG Performance Improvements
+| File                                          | Method                | Notes                       |
+|-----------------------------------------------|-----------------------|-----------------------------|
+| benchmark_results_20260106_062626-custom      | Old (200 char chunks) | Character-based chunking    |
+| benchmark_results_20260106_065712-llama_index | New (512 char chunks) | LlamaIndex SentenceSplitter |
+
+| Metric               | Old (6:26 AM) | New (6:57 AM) | Change | % Improvement      |
+|----------------------|---------------|---------------|--------|--------------------|
+| Completeness         | 0.353         | 0.892         | +0.539 | +152.5% 🔥         |
+| Precision            | 0.271         | 0.317         | +0.046 | +16.9% ✓           |
+| Chunk Retrieval Rate | 0.055         | 1.000         | +0.945 | +1,716% 🚀         |
+| Similarity           | 0.321         | 0.588         | +0.267 | +83.1% 🔥          |
+| Latency              | 203.4ms       | 205.0ms       | +1.5ms | -0.7% (negligible) |
