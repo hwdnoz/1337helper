@@ -1,7 +1,7 @@
 venv/
 node_modules/
 .env
-data/
+backend-python/data/
 *.db
 TODO.md
 docs/
