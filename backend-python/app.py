@@ -11,6 +11,12 @@ if not load_dotenv():
         "(or export GOOGLE_API_KEY in your shell)."
     )
     sys.exit(1)
+if not os.getenv('GOOGLE_API_KEY'):
+    print(
+        "Missing GOOGLE_API_KEY. Add it to backend-python/.env "
+        "(or export GOOGLE_API_KEY in your shell)."
+    )
+    sys.exit(1)
 
 app = Flask(__name__)
 CORS(app)
