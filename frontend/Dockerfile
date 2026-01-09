@@ -13,15 +13,14 @@ COPY . .
 
 # note: gets overridden if docker compose has arg
 ARG VITE_API_URL=http://localhost:4102
+ARG MODE=dev
 
 # for standalone docker manually write .env
 RUN echo "VITE_API_URL=${VITE_API_URL}" > .env
-
-# Build app (incl. minification and compression)
-RUN npm run build
+ENV MODE=${MODE}
 
 # need port
 EXPOSE 3101
 
-# run production server (incl. brotli/gzip support)
-CMD ["npm", "run", "serve"]
+# run dev or prod server based on MODE
+CMD ["sh", "-c", "if [ \"$MODE\" = \"prod\" ]; then npm run build && npm run serve -- --host; else npm run dev -- --host; fi"]

@@ -21,9 +21,9 @@ python-dotenv==1.0.0
 google-genai
 celery==5.4.0
 redis==5.0.1
-scikit-learn==1.3.2
-numpy==1.24.3
+scikit-learn>=1.6.0
+numpy>=2.0.0
 pytest==7.4.3
 pytest-mock==3.12.0
-chromadb==0.4.22
+chromadb>=0.5.23
 llama-index-core>=0.12.0
