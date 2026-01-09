@@ -1,9 +1,16 @@
 import os
+import sys
 from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-load_dotenv()
+
+if not load_dotenv():
+    print(
+        "Missing .env. Create backend-python/.env with GOOGLE_API_KEY "
+        "(or export GOOGLE_API_KEY in your shell)."
+    )
+    sys.exit(1)
 
 app = Flask(__name__)
 CORS(app)
