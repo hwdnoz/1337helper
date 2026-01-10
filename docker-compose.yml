@@ -39,10 +39,8 @@ services:
       context: ./backend-${BACKEND_TYPE:-python}
       dockerfile: Dockerfile
     environment:
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672//
-      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - RABBITMQ_HOST=rabbitmq
+      - REDIS_HOST=redis
       - PORT=3102
     env_file:
       - .env
@@ -67,9 +65,11 @@ services:
     command: celery -A celery_app worker --loglevel=info
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672//
-      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     env_file:
       - .env
     volumes:

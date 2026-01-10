@@ -22,7 +22,7 @@ class PromptCache:
     def _get_redis_client(self):
         """Get Redis client with password authentication"""
         password = os.environ.get('REDIS_PASSWORD', '')
-        return redis.Redis(host='redis', port=6379, db=1,
+        return redis.Redis(host=os.environ['REDIS_HOST'], port=6379, db=1,
                           password=password, decode_responses=True)
 
     def _get_redis_bool(self, key, default=True):

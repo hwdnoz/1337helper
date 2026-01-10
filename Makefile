@@ -1,4 +1,4 @@
-.PHONY: help local-start local-stop docker-frontend docker-backend docker-start docker-stop docker-logs-backend docker-logs-frontend docker-remove-containers docker-remove-images compose-up compose-down compose-clear compose-reload-frontend test benchmark
+.PHONY: help setup-rabbitmq reset-rabbitmq check-dependencies local-start local-stop local-clear docker-frontend docker-backend docker-start docker-stop docker-logs-backend docker-logs-frontend docker-remove-containers docker-remove-images compose-up compose-down compose-clear compose-reload-frontend test benchmark
 
 .DEFAULT_GOAL := help
 
@@ -9,8 +9,12 @@ help:
 	@echo "Available commands:"
 	@echo ""
 	@echo "Local Development:"
-	@echo "  make local-start          - Start backend and frontend locally"
+	@echo "  make setup-rabbitmq       - Create RabbitMQ user from .env with admin permissions"
+	@echo "  make reset-rabbitmq       - Reset RabbitMQ to fresh state (deletes ALL data & users)"
+	@echo "  make check-dependencies   - Check if Redis and RabbitMQ are running"
+	@echo "  make local-start          - Start backend, frontend, and Celery worker (checks dependencies first)"
 	@echo "  make local-stop           - Stop local processes"
+	@echo "  make local-clear          - Clear job queues and cache (RabbitMQ + Redis)"
 	@echo "  make test                 - Run integration tests against API"
 	@echo "  make benchmark            - Run RAG benchmark (saves to backend-python/benchmark_results/)"
 	@echo ""
@@ -35,16 +39,50 @@ help:
 	@echo "  make docker-remove-containers - Remove Docker containers"
 	@echo "  make docker-remove-images     - Remove Docker images"
 
-local-start:
+setup-rabbitmq:
+	@echo "Setting up RabbitMQ user from .env..."
+	@rabbitmqctl status > /dev/null 2>&1 || (echo "❌ RabbitMQ is not running. Start it with: brew services start rabbitmq" && exit 1)
+	@RABBITMQ_USER=$$(grep RABBITMQ_USER .env | cut -d '=' -f2) && \
+	RABBITMQ_PASS=$$(grep RABBITMQ_PASS .env | cut -d '=' -f2) && \
+	rabbitmqctl list_users | grep -q "^$$RABBITMQ_USER" || \
+	(rabbitmqctl add_user $$RABBITMQ_USER $$RABBITMQ_PASS && echo "✓ Created user: $$RABBITMQ_USER") && \
+	rabbitmqctl set_permissions -p / $$RABBITMQ_USER ".*" ".*" ".*" && \
+	rabbitmqctl set_user_tags $$RABBITMQ_USER administrator && \
+	echo "✓ RabbitMQ user configured with admin permissions"
+
+reset-rabbitmq:
+	@echo "⚠️  WARNING: This will delete ALL RabbitMQ data, users, and queues!"
+	@echo "Press Ctrl+C to cancel, or Enter to continue..." && read
+	@echo "Resetting RabbitMQ to fresh state..."
+	@rabbitmqctl stop_app
+	@rabbitmqctl reset
+	@rabbitmqctl start_app
+	@echo "✓ RabbitMQ reset complete. Only 'guest' user exists now."
+	@echo "  Run 'make setup-rabbitmq' to recreate your app user."
+
+check-dependencies:
+	@echo "Checking dependencies..."
+	@redis-cli ping > /dev/null 2>&1 || (echo "❌ Redis is not running. Start it with: brew services start redis" && exit 1)
+	@rabbitmqctl status > /dev/null 2>&1 || (echo "❌ RabbitMQ is not running. Start it with: brew services start rabbitmq" && exit 1)
+	@echo "✓ Redis is running"
+	@echo "✓ RabbitMQ is running"
+
+local-start: check-dependencies
+	@echo "Starting local services..."
 	@lsof -ti :3102 | xargs kill 2>/dev/null || true
 	@lsof -ti :3101 | xargs kill 2>/dev/null || true
+	@pkill -f "celery -A celery_app worker" 2>/dev/null || true
 	@bash -c "cd /Users/howard/Code/1337helper/backend-python && source ../venv/bin/activate && python app.py 2>&1 &"
 	@bash -c "cd /Users/howard/Code/1337helper/frontend && npm run dev 2>&1 &"
+	@bash -c "cd /Users/howard/Code/1337helper/backend-python && source ../venv/bin/activate && celery -A celery_app worker --loglevel=info --pool=solo 2>&1 &"
+	@echo "✓ Started: Flask backend (port 3102), Frontend (port 3101), Celery worker"
 
 local-stop:
-	@echo "Stopping whatever lives on ports 3102 and 3101..."
+	@echo "Stopping whatever lives on ports 3102 and 3101, and celery worker..."
 	@lsof -ti :3102 | xargs kill 2>/dev/null || true
 	@lsof -ti :3101 | xargs kill 2>/dev/null || true
+	@pkill -f "celery -A celery_app worker" 2>/dev/null || true
+	@echo "Stopped: Flask backend, Frontend, Celery worker"
 
 docker-backend:
 	@docker build -t 1337helper-backend .
