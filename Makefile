@@ -14,8 +14,7 @@ help:
 	@echo "  make check-dependencies   - Check if Redis and RabbitMQ are running"
 	@echo "  make local-start          - Start backend, frontend, and Celery worker (checks dependencies first)"
 	@echo "  make local-stop           - Stop local processes"
-	@echo "  make local-clear          - Clear job queues and cache (RabbitMQ + Redis)"
-	@echo "  make test                 - Run integration tests against API"
+	@echo "  make test                 - Run unit and integration tests"
 	@echo "  make benchmark            - Run RAG benchmark (saves to backend-python/benchmark_results/)"
 	@echo ""
 	@echo "Docker (Individual Containers):"
@@ -34,6 +33,7 @@ help:
 	@echo "  make compose-down                        - Stop and remove all containers"
 	@echo "  make compose-clear                       - Stop containers and prune Docker system"
 	@echo "  make compose-reload-frontend             - Rebuild and restart frontend container only"
+	@echo "  make compose-reload-celery               - Rebuild and restart celery-worker container only"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make docker-remove-containers - Remove Docker containers"
@@ -51,21 +51,20 @@ setup-rabbitmq:
 	echo "✓ RabbitMQ user configured with admin permissions"
 
 reset-rabbitmq:
-	@echo "⚠️  WARNING: This will delete ALL RabbitMQ data, users, and queues!"
-	@echo "Press Ctrl+C to cancel, or Enter to continue..." && read
-	@echo "Resetting RabbitMQ to fresh state..."
 	@rabbitmqctl stop_app
 	@rabbitmqctl reset
 	@rabbitmqctl start_app
-	@echo "✓ RabbitMQ reset complete. Only 'guest' user exists now."
-	@echo "  Run 'make setup-rabbitmq' to recreate your app user."
 
 check-dependencies:
 	@echo "Checking dependencies..."
 	@redis-cli ping > /dev/null 2>&1 || (echo "❌ Redis is not running. Start it with: brew services start redis" && exit 1)
 	@rabbitmqctl status > /dev/null 2>&1 || (echo "❌ RabbitMQ is not running. Start it with: brew services start rabbitmq" && exit 1)
-	@echo "✓ Redis is running"
-	@echo "✓ RabbitMQ is running"
+	@RABBITMQ_USER=$$(grep RABBITMQ_USER .env | cut -d '=' -f2) && \
+	if [ -z "$$RABBITMQ_USER" ]; then \
+		echo "❌ RABBITMQ_USER missing in .env. Run: make setup-rabbitmq"; exit 1; \
+	fi && \
+	rabbitmqctl list_users | grep -q "^$$RABBITMQ_USER" || \
+	(echo "❌ RabbitMQ user '$$RABBITMQ_USER' not found. Run: make setup-rabbitmq" && exit 1)
 
 local-start: check-dependencies
 	@echo "Starting local services..."
@@ -95,8 +94,6 @@ docker-frontend:
 docker-start: docker-backend docker-frontend
 	@docker logs --tail 20 1337helper-backend
 	@docker logs --tail 20 1337helper-frontend
-	@echo "Containers started. Use 'make docker-logs-backend' or 'make docker-logs-frontend' to follow logs"
-	@echo "Containers running in background..."
 
 docker-logs-backend:
 	@docker logs -f 1337helper-backend
