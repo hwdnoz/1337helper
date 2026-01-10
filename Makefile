@@ -57,6 +57,8 @@ reset-rabbitmq:
 
 check-dependencies:
 	@echo "Checking dependencies..."
+	@test -f .env || (echo "❌ .env file not found. Copy .env.example to .env and configure it." && exit 1)
+	@grep -q "^GOOGLE_API_KEY=." .env || (echo "❌ GOOGLE_API_KEY not set in .env" && exit 1)
 	@redis-cli ping > /dev/null 2>&1 || (echo "❌ Redis is not running. Start it with: brew services start redis" && exit 1)
 	@rabbitmqctl status > /dev/null 2>&1 || (echo "❌ RabbitMQ is not running. Start it with: brew services start rabbitmq" && exit 1)
 	@RABBITMQ_USER=$$(grep RABBITMQ_USER .env | cut -d '=' -f2) && \
@@ -114,7 +116,8 @@ docker-remove-images:
 	@docker rmi -f 1337helper-frontend 2>/dev/null || true
 
 compose-up:
-	BACKEND_TYPE=$(BACKEND_TYPE) docker compose up --scale backend=$(BACKEND_SCALE)
+	BACKEND_TYPE=$(BACKEND_TYPE) docker compose up -d --scale backend=$(BACKEND_SCALE)
+	@echo "✓ Services started in background. View logs with: docker compose logs -f"
 
 compose-down:
 	@docker compose down
