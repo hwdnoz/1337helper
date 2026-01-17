@@ -62,9 +62,9 @@ local-start: check-dependencies
 	@lsof -ti :3102 | xargs kill 2>/dev/null || true
 	@lsof -ti :3101 | xargs kill 2>/dev/null || true
 	@pkill -f "celery -A celery_app worker" 2>/dev/null || true
-	@bash -c "cd /Users/howard/Code/1337helper/backend-python && source ../venv/bin/activate && python app.py 2>&1 &"
-	@bash -c "cd /Users/howard/Code/1337helper/frontend && npm run dev 2>&1 &"
-	@bash -c "cd /Users/howard/Code/1337helper/backend-python && source ../venv/bin/activate && celery -A celery_app worker --loglevel=info --pool=solo 2>&1 &"
+	@bash -c "cd backend-python && source ../venv/bin/activate && python app.py 2>&1 &"
+	@bash -c "cd frontend && npm run dev 2>&1 &"
+	@bash -c "cd backend-python && source ../venv/bin/activate && celery -A celery_app worker --loglevel=info --pool=solo 2>&1 &"
 	@echo "✓ Started: Flask backend (port 3102), Frontend (port 3101), Celery worker"
 
 local-stop:
