@@ -1,6 +1,10 @@
-.PHONY: help setup-rabbitmq reset-rabbitmq check-dependencies local-start local-stop local-clear docker-frontend docker-backend docker-start docker-stop docker-logs-backend docker-logs-frontend docker-remove-containers docker-remove-images compose-up compose-down compose-clear compose-reload-frontend test benchmark
+.PHONY: help check-dependencies local-start local-stop local-clear docker-frontend docker-backend docker-start docker-stop docker-logs-backend docker-logs-frontend docker-remove-containers docker-remove-images compose-up compose-down compose-clear compose-reload-frontend test benchmark
 
 .DEFAULT_GOAL := help
+
+# Load .env file if it exists
+-include .env
+export
 
 BACKEND_TYPE ?= python
 BACKEND_SCALE ?= 1
@@ -9,8 +13,6 @@ help:
 	@echo "Available commands:"
 	@echo ""
 	@echo "Local Development:"
-	@echo "  make setup-rabbitmq       - Create RabbitMQ user from .env with admin permissions"
-	@echo "  make reset-rabbitmq       - Reset RabbitMQ to fresh state (deletes ALL data & users)"
 	@echo "  make check-dependencies   - Check if Redis and RabbitMQ are running"
 	@echo "  make local-start          - Start backend, frontend, and Celery worker (checks dependencies first)"
 	@echo "  make local-stop           - Stop local processes"
@@ -39,34 +41,21 @@ help:
 	@echo "  make docker-remove-containers - Remove Docker containers"
 	@echo "  make docker-remove-images     - Remove Docker images"
 
-setup-rabbitmq:
-	@echo "Setting up RabbitMQ user from .env..."
-	@rabbitmqctl status > /dev/null 2>&1 || (echo "❌ RabbitMQ is not running. Start it with: brew services start rabbitmq" && exit 1)
-	@RABBITMQ_USER=$$(grep RABBITMQ_USER .env | cut -d '=' -f2) && \
-	RABBITMQ_PASS=$$(grep RABBITMQ_PASS .env | cut -d '=' -f2) && \
-	rabbitmqctl list_users | grep -q "^$$RABBITMQ_USER" || \
-	(rabbitmqctl add_user $$RABBITMQ_USER $$RABBITMQ_PASS && echo "✓ Created user: $$RABBITMQ_USER") && \
-	rabbitmqctl set_permissions -p / $$RABBITMQ_USER ".*" ".*" ".*" && \
-	rabbitmqctl set_user_tags $$RABBITMQ_USER administrator && \
-	echo "✓ RabbitMQ user configured with admin permissions"
-
-reset-rabbitmq:
-	@rabbitmqctl stop_app
-	@rabbitmqctl reset
-	@rabbitmqctl start_app
-
 check-dependencies:
 	@echo "Checking dependencies..."
 	@test -f .env || (echo "❌ .env file not found. Copy .env.example to .env and configure it." && exit 1)
-	@grep -q "^GOOGLE_API_KEY=." .env || (echo "❌ GOOGLE_API_KEY not set in .env" && exit 1)
-	@redis-cli ping > /dev/null 2>&1 || (echo "⚡ Starting Redis..." && redis-server --daemonize yes && sleep 1)
-	@rabbitmqctl status > /dev/null 2>&1 || (echo "⚡ Starting RabbitMQ..." && brew services start rabbitmq && sleep 3)
-	@RABBITMQ_USER=$$(grep RABBITMQ_USER .env | cut -d '=' -f2) && \
-	if [ -z "$$RABBITMQ_USER" ]; then \
-		echo "❌ RABBITMQ_USER missing in .env. Run: make setup-rabbitmq"; exit 1; \
-	fi && \
-	rabbitmqctl list_users | grep -q "^$$RABBITMQ_USER" || \
-	(echo "❌ RabbitMQ user '$$RABBITMQ_USER' not found. Run: make setup-rabbitmq" && exit 1)
+	@test -n "$(GOOGLE_API_KEY)" || (echo "❌ GOOGLE_API_KEY not set in .env" && exit 1)
+	@redis-cli -a "$(REDIS_PASSWORD)" ping > /dev/null 2>&1 || \
+	(echo "⚡ Starting Redis with password..." && redis-server --requirepass "$(REDIS_PASSWORD)" --daemonize yes && sleep 1)
+	@rabbitmqctl status > /dev/null 2>&1 || (echo "⚡ Starting RabbitMQ..." && brew services start rabbitmq && sleep 5)
+	@test -n "$(RABBITMQ_USER)" || (echo "❌ RABBITMQ_USER missing in .env" && exit 1)
+	@test -n "$(RABBITMQ_PASS)" || (echo "❌ RABBITMQ_PASS missing in .env" && exit 1)
+	@rabbitmqctl list_users | grep -q "^$(RABBITMQ_USER)" || \
+	(echo "⚡ Creating RabbitMQ user '$(RABBITMQ_USER)'..." && \
+	rabbitmqctl add_user $(RABBITMQ_USER) $(RABBITMQ_PASS) && \
+	rabbitmqctl set_permissions -p / $(RABBITMQ_USER) ".*" ".*" ".*" && \
+	rabbitmqctl set_user_tags $(RABBITMQ_USER) administrator && \
+	echo "✓ RabbitMQ user configured with admin permissions")
 
 local-start: check-dependencies
 	@echo "Starting local services..."
