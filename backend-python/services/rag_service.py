@@ -59,8 +59,15 @@ class RAGService:
         """Get Redis client with password authentication"""
         try:
             password = os.environ.get('REDIS_PASSWORD', '')
-            client = redis.Redis(host=os.environ['REDIS_HOST'], port=6379, db=1,
-                              password=password, decode_responses=True)
+            kwargs = {
+                'host': os.environ['REDIS_HOST'],
+                'port': 6379,
+                'db': 1,
+                'decode_responses': True
+            }
+            if password:
+                kwargs['password'] = password
+            client = redis.Redis(**kwargs)
             client.ping() # test
             return client
         except Exception as e:

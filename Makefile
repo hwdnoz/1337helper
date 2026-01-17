@@ -59,8 +59,8 @@ check-dependencies:
 	@echo "Checking dependencies..."
 	@test -f .env || (echo "❌ .env file not found. Copy .env.example to .env and configure it." && exit 1)
 	@grep -q "^GOOGLE_API_KEY=." .env || (echo "❌ GOOGLE_API_KEY not set in .env" && exit 1)
-	@redis-cli ping > /dev/null 2>&1 || (echo "❌ Redis is not running. Start it with: brew services start redis" && exit 1)
-	@rabbitmqctl status > /dev/null 2>&1 || (echo "❌ RabbitMQ is not running. Start it with: brew services start rabbitmq" && exit 1)
+	@redis-cli ping > /dev/null 2>&1 || (echo "⚡ Starting Redis..." && redis-server --daemonize yes && sleep 1)
+	@rabbitmqctl status > /dev/null 2>&1 || (echo "⚡ Starting RabbitMQ..." && brew services start rabbitmq && sleep 3)
 	@RABBITMQ_USER=$$(grep RABBITMQ_USER .env | cut -d '=' -f2) && \
 	if [ -z "$$RABBITMQ_USER" ]; then \
 		echo "❌ RABBITMQ_USER missing in .env. Run: make setup-rabbitmq"; exit 1; \
@@ -79,11 +79,13 @@ local-start: check-dependencies
 	@echo "✓ Started: Flask backend (port 3102), Frontend (port 3101), Celery worker"
 
 local-stop:
-	@echo "Stopping whatever lives on ports 3102 and 3101, and celery worker..."
+	@echo "Stopping local services..."
 	@lsof -ti :3102 | xargs kill 2>/dev/null || true
 	@lsof -ti :3101 | xargs kill 2>/dev/null || true
 	@pkill -f "celery -A celery_app worker" 2>/dev/null || true
-	@echo "Stopped: Flask backend, Frontend, Celery worker"
+	@redis-cli shutdown 2>/dev/null || true
+	@brew services stop rabbitmq 2>/dev/null || true
+	@echo "✓ Stopped: Flask backend, Frontend, Celery worker, Redis, RabbitMQ"
 
 docker-backend:
 	@docker build -t 1337helper-backend .
