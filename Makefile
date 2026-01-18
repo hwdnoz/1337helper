@@ -47,7 +47,7 @@ check-dependencies:
 	@test -n "$(GOOGLE_API_KEY)" || (echo "❌ GOOGLE_API_KEY not set in .env" && exit 1)
 	@redis-cli -a "$(REDIS_PASSWORD)" ping > /dev/null 2>&1 || \
 	(echo "⚡ Starting Redis with password..." && redis-server --requirepass "$(REDIS_PASSWORD)" --daemonize yes && sleep 1)
-	@rabbitmqctl status > /dev/null 2>&1 || (echo "⚡ Starting RabbitMQ..." && brew services start rabbitmq && sleep 5)
+	@rabbitmqctl status > /dev/null 2>&1 || (echo "⚡ Starting RabbitMQ..." && rabbitmq-server -detached && sleep 5)
 	@test -n "$(RABBITMQ_USER)" || (echo "❌ RABBITMQ_USER missing in .env" && exit 1)
 	@test -n "$(RABBITMQ_PASS)" || (echo "❌ RABBITMQ_PASS missing in .env" && exit 1)
 	@rabbitmqctl list_users | grep -q "^$(RABBITMQ_USER)" || \
@@ -73,7 +73,7 @@ local-stop:
 	@lsof -ti :3101 | xargs kill 2>/dev/null || true
 	@pkill -f "celery -A celery_app worker" 2>/dev/null || true
 	@redis-cli shutdown 2>/dev/null || true
-	@brew services stop rabbitmq 2>/dev/null || true
+	@rabbitmqctl stop 2>/dev/null || true
 	@echo "✓ Stopped: Flask backend, Frontend, Celery worker, Redis, RabbitMQ"
 
 docker-backend:
