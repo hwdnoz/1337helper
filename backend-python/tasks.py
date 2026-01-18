@@ -67,16 +67,23 @@ def _execute_llm_task(
     Returns:
         Dict with success status, response data, and metadata
     """
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    log = logging.getLogger(__name__)
+
     try:
+        log.info(f"[LLM] Starting {operation_type} with model {current_model}")
         # Prepare cache metadata
         if cache_metadata is None:
             cache_metadata = {}
         cache_metadata['model'] = current_model
 
         # Augment prompt with RAG context (if enabled)
+        log.info("[LLM] Checking RAG service...")
         rag_doc_count = 0
         rag_chunks = []
         if rag_service.is_enabled():
+            log.info("[LLM] RAG enabled, retrieving documents...")
             retrieved_docs = rag_service.retrieve(query=prompt)
             rag_doc_count = len(retrieved_docs)
             rag_chunks = retrieved_docs
@@ -94,6 +101,7 @@ def _execute_llm_task(
             print("[RAG] RAG is disabled, skipping document retrieval")
 
         # Check cache
+        log.info("[LLM] Checking cache...")
         cached_response = cache.get(
             prompt,
             operation_type,
@@ -102,6 +110,7 @@ def _execute_llm_task(
             model_aware_cache,
             metadata=cache_metadata if cache_metadata != {'model': current_model} else None
         )
+        log.info(f"[LLM] Cache check complete. Hit: {bool(cached_response)}")
 
         if cached_response:
             processed_response = cached_response['response_text']
@@ -122,12 +131,14 @@ def _execute_llm_task(
             }
 
         # Make LLM call
+        log.info(f"[LLM] Making API call to {current_model}...")
         start_time = time.time()
         response = client.models.generate_content(
             model=current_model,
             contents=prompt
         )
         latency_ms = (time.time() - start_time) * 1000
+        log.info(f"[LLM] API call complete in {latency_ms:.2f}ms")
 
         response_text = response.text
 
@@ -232,13 +243,20 @@ def process_leetcode_task(self, problem_number, custom_prompt, current_model, us
     """
     Background task to process LeetCode problem
     """
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    logger_task = logging.getLogger(__name__)
+
+    logger_task.info(f"[TASK START] Processing LeetCode problem #{problem_number}")
+
     # Use custom prompt if provided, otherwise load from file
     if custom_prompt:
         prompt = custom_prompt
     else:
         prompt = prompts.get('leetcode_solve', problem_number=problem_number)
 
-    return _execute_llm_task(
+    logger_task.info(f"[TASK] Calling _execute_llm_task...")
+    result = _execute_llm_task(
         prompt=prompt,
         operation_type='leetcode_solve',
         current_model=current_model,
@@ -248,3 +266,5 @@ def process_leetcode_task(self, problem_number, custom_prompt, current_model, us
         use_cache=use_cache,
         model_aware_cache=model_aware_cache
     )
+    logger_task.info(f"[TASK COMPLETE] Result success: {result.get('success')}")
+    return result

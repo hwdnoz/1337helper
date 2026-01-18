@@ -333,17 +333,28 @@ class RAGService:
     @service_error_handler(default_value=[], error_message_prefix="Error during retrieval")
     def retrieve(self, query: str, top_k: int = 20, min_similarity: float = 0.5) -> List[Dict]:
         """Retrieve top-k most relevant documents for a query"""
-        if self.collection.count() == 0:
-            print("[RAG DEBUG] No documents in ChromaDB collection")
-            return []
+        # Skip count() as it can hang in some ChromaDB configurations
+        # Instead, try query and handle empty results
+        import logging
+        log = logging.getLogger(__name__)
 
+        log.info("[RAG] Generating query embedding...")
         query_embedding = self._generate_embedding(query)
+        log.info("[RAG] Query embedding generated")
 
-        results = self.collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,  # get up to top_k results to filter by threshold
-            include=['documents', 'distances', 'metadatas']
-        )
+        log.info("[RAG] Querying ChromaDB...")
+        try:
+            # ChromaDB query can hang in Docker environments, so we'll catch and handle errors
+            results = self.collection.query(
+                query_embeddings=[query_embedding],
+                n_results=top_k,  # get up to top_k results to filter by threshold
+                include=['documents', 'distances', 'metadatas']
+            )
+            log.info("[RAG] ChromaDB query complete")
+        except Exception as e:
+            log.error(f"[RAG] ChromaDB query failed: {e}")
+            # Return empty results rather than hanging
+            return []
 
         retrieved_docs = []
         if results['ids'] and len(results['ids'][0]) > 0:

@@ -88,11 +88,9 @@ docker-start: docker-backend docker-frontend
 	@docker logs --tail 20 1337helper-backend
 	@docker logs --tail 20 1337helper-frontend
 
-docker-logs-backend:
-	@docker logs -f 1337helper-backend
+docker-logs:
+	@docker compose logs -f
 
-docker-logs-frontend:
-	@docker logs -f 1337helper-frontend
 
 docker-stop:
 	@docker stop 1337helper-backend 2>/dev/null || true
