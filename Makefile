@@ -47,28 +47,11 @@ check-dependencies:
 	@test -n "$(GOOGLE_API_KEY)" || (echo "❌ GOOGLE_API_KEY not set in .env" && exit 1)
 	@redis-cli -a "$(REDIS_PASSWORD)" ping > /dev/null 2>&1 || \
 	(echo "⚡ Starting Redis with password..." && redis-server --requirepass "$(REDIS_PASSWORD)" --daemonize yes && sleep 1)
-	@if ! rabbitmqctl status > /dev/null 2>&1 && ! pgrep -f rabbitmq-server > /dev/null 2>&1; then \
-		echo "⚡ Starting RabbitMQ..."; \
-		rabbitmq-server -detached && sleep 5; \
-	elif rabbitmqctl status > /dev/null 2>&1; then \
-		echo "✓ RabbitMQ is already running"; \
-	else \
-		echo "✓ RabbitMQ process detected (running as different user or permissions issue)"; \
-	fi
 	@test -n "$(RABBITMQ_USER)" || (echo "❌ RABBITMQ_USER missing in .env" && exit 1)
 	@test -n "$(RABBITMQ_PASS)" || (echo "❌ RABBITMQ_PASS missing in .env" && exit 1)
-	@if rabbitmqctl list_users > /dev/null 2>&1; then \
-		if ! rabbitmqctl list_users | grep -q "^$(RABBITMQ_USER)"; then \
-			echo "⚡ Creating RabbitMQ user '$(RABBITMQ_USER)'..."; \
-			rabbitmqctl add_user $(RABBITMQ_USER) $(RABBITMQ_PASS) && \
-			rabbitmqctl set_permissions -p / $(RABBITMQ_USER) ".*" ".*" ".*" && \
-			rabbitmqctl set_user_tags $(RABBITMQ_USER) administrator && \
-			echo "✓ RabbitMQ user configured with admin permissions"; \
-		else \
-			echo "✓ RabbitMQ user '$(RABBITMQ_USER)' already exists"; \
-		fi; \
-	else \
-		echo "⚠️  Cannot access rabbitmqctl (permission issue). Assuming RabbitMQ user is already configured."; \
+	@if ! pgrep -f rabbitmq-server > /dev/null 2>&1; then \
+		echo "❌ RabbitMQ is not running. Run: ./scripts/setup-rabbitmq.sh"; \
+		exit 1; \
 	fi
 
 local-start: check-dependencies
