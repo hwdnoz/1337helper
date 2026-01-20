@@ -47,7 +47,14 @@ check-dependencies:
 	@test -n "$(GOOGLE_API_KEY)" || (echo "❌ GOOGLE_API_KEY not set in .env" && exit 1)
 	@redis-cli -a "$(REDIS_PASSWORD)" ping > /dev/null 2>&1 || \
 	(echo "⚡ Starting Redis with password..." && redis-server --requirepass "$(REDIS_PASSWORD)" --daemonize yes && sleep 1)
-	@rabbitmqctl status > /dev/null 2>&1 || (echo "⚡ Starting RabbitMQ..." && rabbitmq-server -detached && sleep 5)
+	@if ! rabbitmqctl status > /dev/null 2>&1 && ! pgrep -f rabbitmq-server > /dev/null 2>&1; then \
+		echo "⚡ Starting RabbitMQ..."; \
+		rabbitmq-server -detached && sleep 5; \
+	elif rabbitmqctl status > /dev/null 2>&1; then \
+		echo "✓ RabbitMQ is already running"; \
+	else \
+		echo "✓ RabbitMQ process detected (running as different user or permissions issue)"; \
+	fi
 	@test -n "$(RABBITMQ_USER)" || (echo "❌ RABBITMQ_USER missing in .env" && exit 1)
 	@test -n "$(RABBITMQ_PASS)" || (echo "❌ RABBITMQ_PASS missing in .env" && exit 1)
 	@rabbitmqctl list_users | grep -q "^$(RABBITMQ_USER)" || \
