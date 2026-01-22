@@ -57,11 +57,11 @@ check-dependencies:
 	fi
 	@test -n "$(RABBITMQ_USER)" || (echo "❌ RABBITMQ_USER missing in .env" && exit 1)
 	@test -n "$(RABBITMQ_PASS)" || (echo "❌ RABBITMQ_PASS missing in .env" && exit 1)
-	@rabbitmqctl list_users | grep -q "^$(RABBITMQ_USER)" || \
+	@sudo rabbitmqctl list_users | grep -q "^$(RABBITMQ_USER)" || \
 	(echo "⚡ Creating RabbitMQ user '$(RABBITMQ_USER)'..." && \
-	rabbitmqctl add_user $(RABBITMQ_USER) $(RABBITMQ_PASS) && \
-	rabbitmqctl set_permissions -p / $(RABBITMQ_USER) ".*" ".*" ".*" && \
-	rabbitmqctl set_user_tags $(RABBITMQ_USER) administrator && \
+	sudo rabbitmqctl add_user $(RABBITMQ_USER) $(RABBITMQ_PASS) && \
+	sudo rabbitmqctl set_permissions -p / $(RABBITMQ_USER) ".*" ".*" ".*" && \
+	sudo rabbitmqctl set_user_tags $(RABBITMQ_USER) administrator && \
 	echo "✓ RabbitMQ user configured with admin permissions")
 
 local-start: check-dependencies
