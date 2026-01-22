@@ -1,4 +1,5 @@
 #!/bin/bash
+# intended for setting up services on ec2 instance together
 set -e
 
 # install git

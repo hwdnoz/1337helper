@@ -1,4 +1,5 @@
 #!/bin/bash
+# intended for configuring on env requiring privileges
 
 set -e
 

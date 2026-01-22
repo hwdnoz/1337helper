@@ -59,9 +59,12 @@ local-stop:
 	@lsof -ti :3102 | xargs kill 2>/dev/null || true
 	@lsof -ti :3101 | xargs kill 2>/dev/null || true
 	@pkill -f "celery -A celery_app worker" 2>/dev/null || true
-	@redis-cli shutdown 2>/dev/null || true
-	@rabbitmqctl stop 2>/dev/null || true
-	@echo "✓ Stopped: Flask backend, Frontend, Celery worker, Redis, RabbitMQ"
+	@pkill -f "python3 app.py" 2>/dev/null || true
+	@echo "✓ Stopped: Flask backend, Frontend, Celery worker"
+	@echo "Note: Redis and RabbitMQ are dependency services and were not stopped."
+	@echo "To stop them manually:"
+	@echo "  Redis: redis-cli -a \"\$$REDIS_PASSWORD\" shutdown"
+	@echo "  RabbitMQ: rabbitmqctl stop"
 
 docker-backend:
 	@docker build -t 1337helper-backend .
