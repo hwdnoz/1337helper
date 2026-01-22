@@ -42,37 +42,17 @@ help:
 	@echo "  make docker-remove-images     - Remove Docker images"
 
 check-dependencies:
-	@echo "Checking dependencies..."
-	@test -f .env || (echo "❌ .env file not found. Copy .env.example to .env and configure it." && exit 1)
-	@test -n "$(GOOGLE_API_KEY)" || (echo "❌ GOOGLE_API_KEY not set in .env" && exit 1)
-	@redis-cli -a "$(REDIS_PASSWORD)" ping > /dev/null 2>&1 || \
-	(echo "⚡ Starting Redis with password..." && redis-server --requirepass "$(REDIS_PASSWORD)" --daemonize yes && sleep 1)
-	@if rabbitmqctl status > /dev/null 2>&1; then \
-		echo "✓ RabbitMQ is already running"; \
-	elif pgrep -x "beam.smp" > /dev/null 2>&1 && pgrep -x "epmd" > /dev/null 2>&1; then \
-		echo "✓ RabbitMQ process detected (running as different user or permissions issue)"; \
-	else \
-		echo "⚡ Starting RabbitMQ..."; \
-		rabbitmq-server -detached && sleep 5; \
-	fi
-	@test -n "$(RABBITMQ_USER)" || (echo "❌ RABBITMQ_USER missing in .env" && exit 1)
-	@test -n "$(RABBITMQ_PASS)" || (echo "❌ RABBITMQ_PASS missing in .env" && exit 1)
-	@sudo rabbitmqctl list_users | grep -q "^$(RABBITMQ_USER)" || \
-	(echo "⚡ Creating RabbitMQ user '$(RABBITMQ_USER)'..." && \
-	sudo rabbitmqctl add_user $(RABBITMQ_USER) $(RABBITMQ_PASS) && \
-	sudo rabbitmqctl set_permissions -p / $(RABBITMQ_USER) ".*" ".*" ".*" && \
-	sudo rabbitmqctl set_user_tags $(RABBITMQ_USER) administrator && \
-	echo "✓ RabbitMQ user configured with admin permissions")
+        @echo "Checking dependencies..."
+        @test -f .env || (echo "❌  .env file not found." && exit 1)
+        @test -n "$(GOOGLE_API_KEY)" || (echo "❌  GOOGLE_API_KEY not set in .env" && exit 1)
+        @redis-cli -a "$(REDIS_PASSWORD)" ping > /dev/null 2>&1 || \
+                (echo "⚡  Starting Redis..." && redis-server --requirepass "$(REDIS_PASSWORD)" --daemonize yes && sleep 1)
 
 local-start: check-dependencies
-	@echo "Starting local services..."
-	@lsof -ti :3102 | xargs kill 2>/dev/null || true
-	@lsof -ti :3101 | xargs kill 2>/dev/null || true
-	@pkill -f "celery -A celery_app worker" 2>/dev/null || true
-	@bash -c "cd backend-python && source ../venv/bin/activate && python app.py 2>&1 &"
-	@bash -c "cd frontend && npm run dev 2>&1 &"
-	@bash -c "cd backend-python && source ../venv/bin/activate && celery -A celery_app worker --loglevel=info --pool=solo 2>&1 &"
-	@echo "✓ Started: Flask backend (port 3102), Frontend (port 3101), Celery worker"
+        @echo "Starting local services (Streaming logs)..."
+        @cd backend-python && ./venv/bin/python3 app.py & \
+         cd backend-python && ./venv/bin/celery -A celery_app worker --loglevel=info --pool=solo & \
+         cd frontend && npm run dev
 
 local-stop:
 	@echo "Stopping local services..."
