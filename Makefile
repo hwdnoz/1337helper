@@ -42,17 +42,17 @@ help:
 	@echo "  make docker-remove-images     - Remove Docker images"
 
 check-dependencies:
-        @echo "Checking dependencies..."
-        @test -f .env || (echo "❌  .env file not found." && exit 1)
-        @test -n "$(GOOGLE_API_KEY)" || (echo "❌  GOOGLE_API_KEY not set in .env" && exit 1)
-        @redis-cli -a "$(REDIS_PASSWORD)" ping > /dev/null 2>&1 || \
-                (echo "⚡  Starting Redis..." && redis-server --requirepass "$(REDIS_PASSWORD)" --daemonize yes && sleep 1)
+	@echo "Checking dependencies..."
+	@test -f .env || (echo "❌  .env file not found." && exit 1)
+	@test -n "$(GOOGLE_API_KEY)" || (echo "❌  GOOGLE_API_KEY not set in .env" && exit 1)
+	@redis-cli -a "$(REDIS_PASSWORD)" ping > /dev/null 2>&1 || \
+		(echo "⚡  Starting Redis..." && redis-server --requirepass "$(REDIS_PASSWORD)" --daemonize yes && sleep 1)
 
 local-start: check-dependencies
-        @echo "Starting local services (Streaming logs)..."
-        @cd backend-python && ./venv/bin/python3 app.py & \
-         cd backend-python && ./venv/bin/celery -A celery_app worker --loglevel=info --pool=solo & \
-         cd frontend && npm run dev
+	@echo "Starting local services (Streaming logs)..."
+	@cd backend-python && ./venv/bin/python3 app.py & \
+	 cd backend-python && ./venv/bin/celery -A celery_app worker --loglevel=info --pool=solo & \
+	 cd frontend && npm run dev
 
 local-stop:
 	@echo "Stopping local services..."
