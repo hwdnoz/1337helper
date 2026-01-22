@@ -13,8 +13,15 @@ class PromptLoader:
     def _get_redis_client(self):
         """Get Redis client with password authentication"""
         password = os.environ.get('REDIS_PASSWORD', '')
-        return redis.Redis(host='redis', port=6379, db=1,
-                          password=password, decode_responses=True)
+        kwargs = {
+            'host': os.environ['REDIS_HOST'],
+            'port': 6379,
+            'db': 1,
+            'decode_responses': True
+        }
+        if password:
+            kwargs['password'] = password
+        return redis.Redis(**kwargs)
 
     def _load_default(self, prompt_name):
         """Load default prompt from file, with caching"""

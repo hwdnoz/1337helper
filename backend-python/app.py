@@ -4,19 +4,10 @@ from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-
-if not load_dotenv():
-    print(
-        "Missing .env. Create backend-python/.env with GOOGLE_API_KEY "
-        "(or export GOOGLE_API_KEY in your shell)."
-    )
-    sys.exit(1)
-if not os.getenv('GOOGLE_API_KEY'):
-    print(
-        "Missing GOOGLE_API_KEY. Add it to backend-python/.env "
-        "(or export GOOGLE_API_KEY in your shell)."
-    )
-    sys.exit(1)
+# For docker compose, env vars set in docker-compose.yml
+# For non docker local dev, load from .env file
+env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+load_dotenv(env_path)
 
 app = Flask(__name__)
 CORS(app)

@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from tasks import process_leetcode_task, process_test_case_task, process_code_modification_task
 from celery.result import AsyncResult
 from services import cache
+from celery_app import celery_app
 
 jobs_bp = Blueprint('jobs', __name__)
 
@@ -69,7 +70,7 @@ def submit_code_modification_job():
 @jobs_bp.route('/api/jobs/<job_id>', methods=['GET'])
 def get_job_status(job_id):
     """Check status of a background job"""
-    task = AsyncResult(job_id)
+    task = AsyncResult(job_id, app=celery_app)
 
     # State mapping with status messages
     state_mapping = {

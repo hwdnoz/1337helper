@@ -27,22 +27,16 @@ class RAGService:
         if chroma_path is None:
             current_dir = os.path.dirname(os.path.abspath(__file__))  # services/
             backend_dir = os.path.dirname(current_dir)  # backend-python/
-            project_root = os.path.dirname(backend_dir)  # 1337helper/
-            chroma_path = os.path.join(project_root, 'data', 'chroma')
+            chroma_path = os.path.join(backend_dir, 'data', 'chroma')
 
         self.chroma_path = chroma_path
+        logger.info("Chroma path: %s", self.chroma_path)
 
         self.genai_client = genai.Client(api_key=os.getenv('GOOGLE_API_KEY'))
 
-        self.chroma_client = chromadb.PersistentClient(
-            path=chroma_path,
-            settings=Settings(anonymized_telemetry=False)
-        )
-
-        self.collection = self.chroma_client.get_or_create_collection(
-            name="rag_documents",
-            metadata={"description": "RAG document embeddings", "hnsw:space": "cosine"}
-        )
+        # Don't keep persistent connection - create on demand
+        self.chroma_client = None
+        self.collection = None
 
         # sentence splitter for intelligent chunking
         self.text_splitter = SentenceSplitter(
@@ -55,12 +49,41 @@ class RAGService:
 
         self._local_id_counter = 0 # fallback when redis unavailable
 
+    def _get_collection(self):
+        """Get ChromaDB collection, creating fresh connection if needed"""
+        if self.chroma_client is None or self.collection is None:
+            self.chroma_client = chromadb.PersistentClient(
+                path=self.chroma_path,
+                settings=Settings(anonymized_telemetry=False)
+            )
+            self.collection = self.chroma_client.get_or_create_collection(
+                name="rag_documents",
+                metadata={"description": "RAG document embeddings", "hnsw:space": "cosine"}
+            )
+        return self.chroma_client, self.collection
+
+    def _close_collection(self):
+        """Close ChromaDB connection to release file locks"""
+        if self.collection is not None:
+            del self.collection
+            self.collection = None
+        if self.chroma_client is not None:
+            del self.chroma_client
+            self.chroma_client = None
+
     def _get_redis_client(self):
         """Get Redis client with password authentication"""
         try:
             password = os.environ.get('REDIS_PASSWORD', '')
-            client = redis.Redis(host='redis', port=6379, db=1,
-                              password=password, decode_responses=True)
+            kwargs = {
+                'host': os.environ['REDIS_HOST'],
+                'port': 6379,
+                'db': 1,
+                'decode_responses': True
+            }
+            if password:
+                kwargs['password'] = password
+            client = redis.Redis(**kwargs)
             client.ping() # test
             return client
         except Exception as e:
@@ -326,17 +349,31 @@ class RAGService:
     @service_error_handler(default_value=[], error_message_prefix="Error during retrieval")
     def retrieve(self, query: str, top_k: int = 20, min_similarity: float = 0.5) -> List[Dict]:
         """Retrieve top-k most relevant documents for a query"""
-        if self.collection.count() == 0:
-            print("[RAG DEBUG] No documents in ChromaDB collection")
-            return []
+        import logging
+        log = logging.getLogger(__name__)
 
+        log.info("[RAG] Generating query embedding...")
         query_embedding = self._generate_embedding(query)
+        log.info("[RAG] Query embedding generated")
 
-        results = self.collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,  # get up to top_k results to filter by threshold
-            include=['documents', 'distances', 'metadatas']
-        )
+        log.info("[RAG] Getting ChromaDB connection...")
+        client, collection = self._get_collection()
+
+        try:
+            log.info("[RAG] Querying ChromaDB...")
+            results = collection.query(
+                query_embeddings=[query_embedding],
+                n_results=top_k,
+                include=['documents', 'distances', 'metadatas']
+            )
+            log.info("[RAG] ChromaDB query complete")
+        except Exception as e:
+            log.error(f"[RAG] ChromaDB query failed: {e}")
+            return []
+        finally:
+            # Close connection after operation to release locks
+            self._close_collection()
+            log.info("[RAG] ChromaDB connection closed")
 
         retrieved_docs = []
         if results['ids'] and len(results['ids'][0]) > 0:

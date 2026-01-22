@@ -1,15 +1,31 @@
 import os
 from celery import Celery
+from dotenv import load_dotenv
 
-# Get RabbitMQ credentials from environment
-RABBITMQ_USER = os.getenv('RABBITMQ_USER', '1337helper')
-RABBITMQ_PASS = os.getenv('RABBITMQ_PASS', '1337helper')
+# Load .env from parent directory (project root)
+env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+load_dotenv(env_path)
+
+# Get RabbitMQ connection details from environment
+RABBITMQ_USER = os.environ['RABBITMQ_USER']
+RABBITMQ_PASS = os.environ['RABBITMQ_PASS']
+RABBITMQ_HOST = os.environ['RABBITMQ_HOST']
+RABBITMQ_PORT = os.environ['RABBITMQ_PORT']
+REDIS_HOST = os.environ['REDIS_HOST']
+REDIS_PORT = os.environ['REDIS_PORT']
+REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', '')
 
 # Configure Celery
+# Build Redis URL - handle empty password case
+if REDIS_PASSWORD:
+    redis_url = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'
+else:
+    redis_url = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
+
 celery_app = Celery(
     'tasks',
-    broker=os.getenv('CELERY_BROKER_URL', f'amqp://{RABBITMQ_USER}:{RABBITMQ_PASS}@localhost:5672//'),
-    backend=os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0'),
+    broker=f'amqp://{RABBITMQ_USER}:{RABBITMQ_PASS}@{RABBITMQ_HOST}:{RABBITMQ_PORT}//',
+    backend=redis_url,
     include=['tasks']  # Include tasks module
 )
 

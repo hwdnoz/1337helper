@@ -1,6 +1,10 @@
-.PHONY: help local-start local-stop docker-frontend docker-backend docker-start docker-stop docker-logs-backend docker-logs-frontend docker-remove-containers docker-remove-images compose-up compose-down compose-clear compose-reload-frontend test benchmark
+.PHONY: help check-dependencies local-start local-stop local-clear docker-frontend docker-backend docker-start docker-stop docker-logs-backend docker-logs-frontend docker-remove-containers docker-remove-images compose-up compose-down compose-clear compose-reload-frontend test benchmark
 
 .DEFAULT_GOAL := help
+
+# Load .env file if it exists
+-include .env
+export
 
 BACKEND_TYPE ?= python
 BACKEND_SCALE ?= 1
@@ -9,9 +13,10 @@ help:
 	@echo "Available commands:"
 	@echo ""
 	@echo "Local Development:"
-	@echo "  make local-start          - Start backend and frontend locally"
+	@echo "  make check-dependencies   - Check if Redis and RabbitMQ are running"
+	@echo "  make local-start          - Start backend, frontend, and Celery worker (checks dependencies first)"
 	@echo "  make local-stop           - Stop local processes"
-	@echo "  make test                 - Run integration tests against API"
+	@echo "  make test                 - Run unit and integration tests"
 	@echo "  make benchmark            - Run RAG benchmark (saves to backend-python/benchmark_results/)"
 	@echo ""
 	@echo "Docker (Individual Containers):"
@@ -30,21 +35,36 @@ help:
 	@echo "  make compose-down                        - Stop and remove all containers"
 	@echo "  make compose-clear                       - Stop containers and prune Docker system"
 	@echo "  make compose-reload-frontend             - Rebuild and restart frontend container only"
+	@echo "  make compose-reload-celery               - Rebuild and restart celery-worker container only"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make docker-remove-containers - Remove Docker containers"
 	@echo "  make docker-remove-images     - Remove Docker images"
 
-local-start:
-	@lsof -ti :3102 | xargs kill 2>/dev/null || true
-	@lsof -ti :3101 | xargs kill 2>/dev/null || true
-	@bash -c "cd /Users/howard/Code/1337helper/backend-python && source ../venv/bin/activate && python app.py 2>&1 &"
-	@bash -c "cd /Users/howard/Code/1337helper/frontend && npm run dev 2>&1 &"
+check-dependencies:
+	@echo "Checking dependencies..."
+	@test -f .env || (echo "❌  .env file not found." && exit 1)
+	@test -n "$(GOOGLE_API_KEY)" || (echo "❌  GOOGLE_API_KEY not set in .env" && exit 1)
+	@redis-cli -a "$(REDIS_PASSWORD)" ping > /dev/null 2>&1 || \
+		(echo "⚡  Starting Redis..." && redis-server --requirepass "$(REDIS_PASSWORD)" --daemonize yes && sleep 1)
+
+local-start: check-dependencies
+	@echo "Starting local services (Streaming logs)..."
+	@cd backend-python && ./venv/bin/python3 app.py & \
+	 cd backend-python && ./venv/bin/celery -A celery_app worker --loglevel=info --pool=solo & \
+	 cd frontend && npm run dev
 
 local-stop:
-	@echo "Stopping whatever lives on ports 3102 and 3101..."
+	@echo "Stopping local services..."
 	@lsof -ti :3102 | xargs kill 2>/dev/null || true
 	@lsof -ti :3101 | xargs kill 2>/dev/null || true
+	@pkill -f "celery -A celery_app worker" 2>/dev/null || true
+	@pkill -f "python3 app.py" 2>/dev/null || true
+	@echo "✓ Stopped: Flask backend, Frontend, Celery worker"
+	@echo "Note: Redis and RabbitMQ are dependency services and were not stopped."
+	@echo "To stop them manually:"
+	@echo "  Redis: redis-cli -a \"\$$REDIS_PASSWORD\" shutdown"
+	@echo "  RabbitMQ: rabbitmqctl stop"
 
 docker-backend:
 	@docker build -t 1337helper-backend .
@@ -57,14 +77,10 @@ docker-frontend:
 docker-start: docker-backend docker-frontend
 	@docker logs --tail 20 1337helper-backend
 	@docker logs --tail 20 1337helper-frontend
-	@echo "Containers started. Use 'make docker-logs-backend' or 'make docker-logs-frontend' to follow logs"
-	@echo "Containers running in background..."
 
-docker-logs-backend:
-	@docker logs -f 1337helper-backend
+docker-logs:
+	@docker compose logs -f
 
-docker-logs-frontend:
-	@docker logs -f 1337helper-frontend
 
 docker-stop:
 	@docker stop 1337helper-backend 2>/dev/null || true
@@ -79,7 +95,8 @@ docker-remove-images:
 	@docker rmi -f 1337helper-frontend 2>/dev/null || true
 
 compose-up:
-	BACKEND_TYPE=$(BACKEND_TYPE) docker compose up --scale backend=$(BACKEND_SCALE)
+	BACKEND_TYPE=$(BACKEND_TYPE) docker compose up -d --scale backend=$(BACKEND_SCALE)
+	@echo "✓ Services started in background. View logs with: docker compose logs -f"
 
 compose-down:
 	@docker compose down
