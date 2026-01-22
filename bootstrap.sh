@@ -61,15 +61,19 @@ pip install -r requirements.txt
 
 deactivate
 
-# install npm
+# install node/npm via nvm
 cd ../frontend
 
-export NVM_DIR="$HOME/.nvm"
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
 
+export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
 nvm install --lts
+
+# fix ownership in case sudo commands affected it
+sudo chown -R "$USER:$USER" .
 
 npm install
 
