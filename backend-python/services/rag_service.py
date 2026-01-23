@@ -32,8 +32,6 @@ class RAGService:
         self.chroma_path = chroma_path
         logger.info("Chroma path: %s", self.chroma_path)
 
-        self.genai_client = genai.Client(api_key=os.getenv('GOOGLE_API_KEY'))
-
         # Don't keep persistent connection - create on demand
         self.chroma_client = None
         self.collection = None
@@ -77,11 +75,12 @@ class RAGService:
         """Generate SHA256 hash of content for deduplication"""
         return hashlib.sha256(content.encode()).hexdigest()
 
-    def _generate_embedding(self, text: str) -> List[float]:
+    def _generate_embedding(self, text: str, api_key: str) -> List[float]:
         """Generate embedding using Google's embedding API"""
 
         try:
-            result = self.genai_client.models.embed_content(
+            genai_client = genai.Client(api_key=api_key)
+            result = genai_client.models.embed_content(
                 model='models/text-embedding-004',
                 contents=[text]
             )
@@ -114,8 +113,12 @@ class RAGService:
         return chunks if chunks else [text]
 
     @service_error_handler(default_value=None, error_message_prefix="Error adding document")
-    def add_document(self, content: str) -> Optional[int]:
+    def add_document(self, content: str, api_key: str) -> Optional[int]:
         """Add a document to the RAG store, chunking if necessary"""
+        if not api_key:
+            logger.error("No API key provided for add_document")
+            return None
+
         content_hash = self._hash_content(content)
         created_at = datetime.now().isoformat()
 
@@ -137,7 +140,7 @@ class RAGService:
 
         if len(chunks) == 1:
             doc_id = self._get_next_id()
-            embedding = self._generate_embedding(content)
+            embedding = self._generate_embedding(content, api_key)
 
             self.collection.add(
                 ids=[str(doc_id)],
@@ -155,7 +158,7 @@ class RAGService:
 
         # multiple chunks, create parent doc
         parent_id = self._get_next_id()
-        parent_embedding = self._generate_embedding(content)
+        parent_embedding = self._generate_embedding(content, api_key)
 
         self.collection.add(
             ids=[str(parent_id)],
@@ -178,7 +181,7 @@ class RAGService:
             chunk_id = self._get_next_id()
             chunk_ids.append(str(chunk_id))
 
-            embedding = self._generate_embedding(chunk)
+            embedding = self._generate_embedding(chunk, api_key)
             chunk_embeddings.append(embedding)
 
             chunk_metadatas.append({
@@ -294,13 +297,17 @@ class RAGService:
         return documents
 
     @service_error_handler(default_value=[], error_message_prefix="Error during retrieval")
-    def retrieve(self, query: str, top_k: int = 20, min_similarity: float = 0.5) -> List[Dict]:
+    def retrieve(self, query: str, api_key: str, top_k: int = 20, min_similarity: float = 0.5) -> List[Dict]:
         """Retrieve top-k most relevant documents for a query"""
         import logging
         log = logging.getLogger(__name__)
 
+        if not api_key:
+            log.error("[RAG] No API key provided for retrieve")
+            return []
+
         log.info("[RAG] Generating query embedding...")
-        query_embedding = self._generate_embedding(query)
+        query_embedding = self._generate_embedding(query, api_key)
         log.info("[RAG] Query embedding generated")
 
         log.info("[RAG] Getting ChromaDB connection...")

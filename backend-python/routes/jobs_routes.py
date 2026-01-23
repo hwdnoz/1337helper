@@ -12,9 +12,16 @@ def submit_leetcode_job():
     """Process a LeetCode problem synchronously"""
     problem_number = request.json.get('problem_number', '')
     custom_prompt = request.json.get('custom_prompt', None)
+    api_key = request.json.get('google_api_key') or request.headers.get('X-Google-API-Key')
+
+    if not api_key:
+        return jsonify({
+            'success': False,
+            'error': 'No Google API key provided'
+        }), 400
 
     # Process synchronously
-    result = process_leetcode(problem_number, custom_prompt)
+    result = process_leetcode(problem_number, api_key, custom_prompt)
 
     if result.get('success'):
         return jsonify({
@@ -32,9 +39,16 @@ def submit_leetcode_job():
 def submit_test_case_job():
     """Generate test cases synchronously"""
     code = request.json.get('code', '')
+    api_key = request.json.get('google_api_key') or request.headers.get('X-Google-API-Key')
+
+    if not api_key:
+        return jsonify({
+            'success': False,
+            'error': 'No Google API key provided'
+        }), 400
 
     # Process synchronously
-    result = process_test_cases(code)
+    result = process_test_cases(code, api_key)
 
     if result.get('success'):
         return jsonify({
@@ -53,9 +67,16 @@ def submit_code_modification_job():
     """Modify code synchronously"""
     prompt = request.json.get('prompt', '')
     code = request.json.get('code', '')
+    api_key = request.json.get('google_api_key') or request.headers.get('X-Google-API-Key')
+
+    if not api_key:
+        return jsonify({
+            'success': False,
+            'error': 'No Google API key provided'
+        }), 400
 
     # Process synchronously
-    result = process_code_modification(prompt, code)
+    result = process_code_modification(prompt, code, api_key)
 
     if result.get('success'):
         return jsonify({

@@ -6,12 +6,14 @@ import './styles/components.css'
 import { API_URL } from './config'
 import { useJobManager } from './hooks/useJobManager'
 import { usePromptLoader } from './hooks/usePromptLoader'
+import { hasApiKey, addApiKeyToBody } from './utils/apiKeyManager'
 import JobQueue from './components/app/JobQueue'
 import Header from './components/app/Header'
 import LeetCodeInput from './components/app/LeetCodeInput'
 import OutputPanel from './components/app/OutputPanel'
 import AppSidebar from './components/app/sidebar/AppSidebar'
 import Spinner from './components/ui/Spinner'
+import SettingsModal from './components/app/SettingsModal'
 
 // Lazy load heavy CodeMirror component
 const CodeEditorPanel = lazy(() => import('./components/app/CodeEditorPanel'))
@@ -26,7 +28,8 @@ function App() {
     sidebarMode: 'solution-prompt',
     vimEnabled: true,
     showPromptDiff: false,
-    showRagChunks: false
+    showRagChunks: false,
+    settingsOpen: false
   })
 
   // Loading states for LLM API requests
@@ -178,12 +181,19 @@ function App() {
   }
 
   const applyLlmPrompt = async () => {
+    if (!hasApiKey()) {
+      alert('Please set your Google API key in Settings first')
+      setUi(prev => ({ ...prev, settingsOpen: true }))
+      return
+    }
+
     setLoading(prev => ({ ...prev, codeModification: true }))
     try {
+      const body = addApiKeyToBody({ prompt: content.llmPrompt, code: content.code })
       const res = await fetch(`${API_URL}/api/jobs/code-modification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: content.llmPrompt, code: content.code })
+        body: JSON.stringify(body)
       })
       const data = await res.json()
 
@@ -207,7 +217,12 @@ function App() {
           tokensReceived: data.result.tokens_received || 0
         }))
       } else if (data.error) {
-        alert(`Error: ${data.error}`)
+        if (data.error.includes('No Google API key provided')) {
+          alert('API key missing or invalid. Please check your settings.')
+          setUi(prev => ({ ...prev, settingsOpen: true }))
+        } else {
+          alert(`Error: ${data.error}`)
+        }
       }
     } catch (error) {
       console.error('Fetch Error:', error)
@@ -234,16 +249,23 @@ function App() {
   }
 
   const solveLeetcode = async () => {
+    if (!hasApiKey()) {
+      alert('Please set your Google API key in Settings first')
+      setUi(prev => ({ ...prev, settingsOpen: true }))
+      return
+    }
+
     setUi(prev => ({ ...prev, sidebarOpen: false }))
     setLoading(prev => ({ ...prev, leetcode: true }))
     try {
+      const body = addApiKeyToBody({
+        problem_number: content.leetcodeNumber,
+        custom_prompt: getFinalPrompt()
+      })
       const res = await fetch(`${API_URL}/api/jobs/leetcode`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          problem_number: content.leetcodeNumber,
-          custom_prompt: getFinalPrompt()
-        })
+        body: JSON.stringify(body)
       })
       const data = await res.json()
 
@@ -267,7 +289,12 @@ function App() {
           tokensReceived: data.result.tokens_received || 0
         }))
       } else if (data.error) {
-        alert(`Error: ${data.error}`)
+        if (data.error.includes('No Google API key provided')) {
+          alert('API key missing or invalid. Please check your settings.')
+          setUi(prev => ({ ...prev, settingsOpen: true }))
+        } else {
+          alert(`Error: ${data.error}`)
+        }
       }
     } catch (error) {
       console.error('Fetch Error:', error)
@@ -278,12 +305,19 @@ function App() {
   }
 
   const generateTestCases = async () => {
+    if (!hasApiKey()) {
+      alert('Please set your Google API key in Settings first')
+      setUi(prev => ({ ...prev, settingsOpen: true }))
+      return
+    }
+
     setLoading(prev => ({ ...prev, testCases: true }))
     try {
+      const body = addApiKeyToBody({ code: content.code })
       const res = await fetch(`${API_URL}/api/jobs/test-cases`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: content.code })
+        body: JSON.stringify(body)
       })
       const data = await res.json()
 
@@ -298,7 +332,12 @@ function App() {
           }))
         }
       } else if (data.error) {
-        alert(`Error: ${data.error}`)
+        if (data.error.includes('No Google API key provided')) {
+          alert('API key missing or invalid. Please check your settings.')
+          setUi(prev => ({ ...prev, settingsOpen: true }))
+        } else {
+          alert(`Error: ${data.error}`)
+        }
       }
     } catch (error) {
       console.error('Fetch Error:', error)
@@ -314,6 +353,13 @@ function App() {
         ui={ui}
         toggleSidebar={toggleSidebar}
         navigate={navigate}
+        onOpenSettings={() => setUi(prev => ({ ...prev, settingsOpen: true }))}
+        hasApiKey={hasApiKey()}
+      />
+
+      <SettingsModal
+        isOpen={ui.settingsOpen}
+        onClose={() => setUi(prev => ({ ...prev, settingsOpen: false }))}
       />
 
       <LeetCodeInput

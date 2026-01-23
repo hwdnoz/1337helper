@@ -1,6 +1,11 @@
 #!/bin/bash
 # intended for setting up services on ec2 instance together
+# bootstrap via source bootstrap.sh
 set -e
+
+mkdir Code
+
+cd Code
 
 # install git
 sudo yum install git -y
@@ -9,13 +14,8 @@ git clone https://github.com/hwdnoz/1337helper.git
 
 cd 1337helper
 
-git checkout local-run
-
 # install make
 sudo yum install make -y
-
-# TODO: copy over variables
-cp .env.example .env
 
 # install python venv
 cd backend-python
@@ -38,9 +38,6 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
 nvm install --lts
-
-# fix ownership in case sudo commands affected it
-sudo chown -R "$USER:$USER" .
 
 npm install
 

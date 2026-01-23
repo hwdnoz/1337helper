@@ -1,7 +1,6 @@
 """
-Synchronous LLM service 
+Synchronous LLM service
 """
-import os
 import time
 import logging
 from typing import Optional, Callable, Dict, Any
@@ -12,9 +11,6 @@ from services.config_service import config
 from prompts.loader import PromptLoader
 
 logger = logging.getLogger(__name__)
-
-# Configure Google AI
-client = genai.Client(api_key=os.getenv('GOOGLE_API_KEY'))
 
 # Initialize prompt loader
 prompts = PromptLoader()
@@ -42,6 +38,7 @@ def _execute_llm_task(
     prompt: str,
     operation_type: str,
     current_model: str,
+    api_key: str,
     response_key: str = 'response',
     cache_metadata: Optional[Dict[str, Any]] = None,
     post_processor: Optional[Callable[[str], str]] = None,
@@ -64,6 +61,7 @@ def _execute_llm_task(
         prompt: The prompt to send to the LLM
         operation_type: Type of operation (for logging/caching)
         current_model: Model to use for generation
+        api_key: Google API key for authentication
         response_key: Key name for response in return dict (default: 'response')
         cache_metadata: Optional metadata for cache lookup
         post_processor: Optional function to process response text
@@ -73,7 +71,15 @@ def _execute_llm_task(
     Returns:
         Dict with success status, response data, and metadata
     """
+    if not api_key:
+        return {
+            'success': False,
+            'error': 'No Google API key provided'
+        }
+
     try:
+        # Create client with provided API key
+        client = genai.Client(api_key=api_key)
         logger.info(f"[LLM] Starting {operation_type} with model {current_model}")
 
         # Prepare cache metadata
@@ -87,7 +93,7 @@ def _execute_llm_task(
         rag_chunks = []
         if rag_service.is_enabled():
             logger.info("[LLM] RAG enabled, retrieving documents...")
-            retrieved_docs = rag_service.retrieve(query=prompt)
+            retrieved_docs = rag_service.retrieve(query=prompt, api_key=api_key)
             rag_doc_count = len(retrieved_docs)
             rag_chunks = retrieved_docs
             if retrieved_docs:
@@ -208,17 +214,24 @@ def _execute_llm_task(
         }
 
 
-def process_leetcode(problem_number: str, custom_prompt: Optional[str] = None) -> Dict[str, Any]:
+def process_leetcode(problem_number: str, api_key: str, custom_prompt: Optional[str] = None) -> Dict[str, Any]:
     """
     Process LeetCode problem synchronously.
 
     Args:
         problem_number: The LeetCode problem number
+        api_key: Google API key for authentication
         custom_prompt: Optional custom prompt to override default
 
     Returns:
         Dict with success status and response data
     """
+    if not api_key:
+        return {
+            'success': False,
+            'error': 'No Google API key provided'
+        }
+
     logger.info(f"[TASK START] Processing LeetCode problem #{problem_number}")
 
     # Use custom prompt if provided, otherwise load from file
@@ -232,6 +245,7 @@ def process_leetcode(problem_number: str, custom_prompt: Optional[str] = None) -
         prompt=prompt,
         operation_type='leetcode_solve',
         current_model=config.get_current_model(),
+        api_key=api_key,
         response_key='response',
         cache_metadata={'problem_number': problem_number},
         post_processor=None,  # No markdown stripping for leetcode
@@ -242,22 +256,30 @@ def process_leetcode(problem_number: str, custom_prompt: Optional[str] = None) -
     return result
 
 
-def process_test_cases(code: str) -> Dict[str, Any]:
+def process_test_cases(code: str, api_key: str) -> Dict[str, Any]:
     """
     Generate test cases for code synchronously.
 
     Args:
         code: The code to generate test cases for
+        api_key: Google API key for authentication
 
     Returns:
         Dict with success status and test cases
     """
+    if not api_key:
+        return {
+            'success': False,
+            'error': 'No Google API key provided'
+        }
+
     prompt = prompts.get('test_case_generation', code=code)
 
     return _execute_llm_task(
         prompt=prompt,
         operation_type='test_case_generation',
         current_model=config.get_current_model(),
+        api_key=api_key,
         response_key='test_cases',
         post_processor=_strip_markdown_code_blocks,
         use_cache=config.is_cache_enabled(),
@@ -265,23 +287,31 @@ def process_test_cases(code: str) -> Dict[str, Any]:
     )
 
 
-def process_code_modification(prompt_text: str, code: str) -> Dict[str, Any]:
+def process_code_modification(prompt_text: str, code: str, api_key: str) -> Dict[str, Any]:
     """
     Modify code based on user prompt synchronously.
 
     Args:
         prompt_text: The modification instructions
         code: The code to modify
+        api_key: Google API key for authentication
 
     Returns:
         Dict with success status and modified code
     """
+    if not api_key:
+        return {
+            'success': False,
+            'error': 'No Google API key provided'
+        }
+
     full_prompt = prompts.get('code_modification', code=code, prompt=prompt_text)
 
     return _execute_llm_task(
         prompt=full_prompt,
         operation_type='code_modification',
         current_model=config.get_current_model(),
+        api_key=api_key,
         response_key='code',
         post_processor=_strip_markdown_code_blocks,
         use_cache=config.is_cache_enabled(),

@@ -100,10 +100,15 @@ def get_rag_documents():
 def add_rag_document():
     """Add a new document to RAG"""
     content = request.json.get('content')
+    api_key = request.json.get('google_api_key') or request.headers.get('X-Google-API-Key')
+
     if not content:
         return jsonify({'success': False, 'error': 'No content provided'})
 
-    doc_id = rag_service.add_document(content)
+    if not api_key:
+        return jsonify({'success': False, 'error': 'No Google API key provided'})
+
+    doc_id = rag_service.add_document(content, api_key)
     if doc_id:
         return {'success': True, 'id': doc_id}
     else:
