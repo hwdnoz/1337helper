@@ -5,11 +5,11 @@ import uuid
 from typing import List, Dict, Optional
 from datetime import datetime
 import numpy as np
-import redis
 import chromadb
 from chromadb.config import Settings
 from google import genai
 from utils import service_error_handler, cache_error_handler
+from services.config_service import config
 
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.schema import Document as LlamaDocument
@@ -47,8 +47,6 @@ class RAGService:
             separator=" ",  # word boundaries
         )
 
-        self._local_id_counter = 0 # fallback when redis unavailable
-
     def _get_collection(self):
         """Get ChromaDB collection, creating fresh connection if needed"""
         if self.chroma_client is None or self.collection is None:
@@ -71,60 +69,9 @@ class RAGService:
             del self.chroma_client
             self.chroma_client = None
 
-    def _get_redis_client(self):
-        """Get Redis client with password authentication"""
-        try:
-            password = os.environ.get('REDIS_PASSWORD', '')
-            kwargs = {
-                'host': os.environ['REDIS_HOST'],
-                'port': 6379,
-                'db': 1,
-                'decode_responses': True
-            }
-            if password:
-                kwargs['password'] = password
-            client = redis.Redis(**kwargs)
-            client.ping() # test
-            return client
-        except Exception as e:
-            logger.warning(f"Redis not available: {e}. Using local counter.")
-            return None
-
-    def _get_redis_bool(self, key, default=True):
-        """Get boolean value from Redis (stored as '1'/'0')"""
-        r = self._get_redis_client()
-        if r is None:
-            return default
-        try:
-            value = r.get(key)
-            return value == '1' if value is not None else default
-        except:
-            return default
-
-    def _set_redis_bool(self, key, value):
-        """Set boolean value in Redis (stored as '1'/'0')"""
-        r = self._get_redis_client()
-        if r is None:
-            return value
-        try:
-            r.set(key, '1' if value else '0')
-        except:
-            pass
-        return value
-
     def _get_next_id(self) -> int:
-        """Get next available document ID from Redis counter (or local counter if Redis unavailable)"""
-        r = self._get_redis_client()
-        if r is None:
-            # local counter
-            self._local_id_counter += 1
-            return self._local_id_counter
-        try:
-            return r.incr('rag_doc_id_counter')
-        except:
-            # fallback to local counter
-            self._local_id_counter += 1
-            return self._local_id_counter
+        """Get next available document ID from config service"""
+        return config.increment_rag_doc_id()
 
     def _hash_content(self, content: str) -> str:
         """Generate SHA256 hash of content for deduplication"""
@@ -427,13 +374,12 @@ class RAGService:
         return "".join(context_parts)
 
     def set_enabled(self, enabled: bool) -> bool:
-        """Store RAG enabled state in Redis (shared across all containers)"""
-        return self._set_redis_bool('rag_enabled', enabled)
+        """Store RAG enabled state"""
+        return config.set_rag_enabled(enabled)
 
-    @cache_error_handler(default_value=True)
     def is_enabled(self) -> bool:
-        """Read RAG enabled state from Redis (shared across all containers)"""
-        return self._get_redis_bool('rag_enabled', default=True)
+        """Read RAG enabled state"""
+        return config.is_rag_enabled()
 
 
 # Global RAG instance

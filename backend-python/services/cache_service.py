@@ -8,8 +8,8 @@ from datetime import datetime, timedelta
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
-import redis
 from utils import cache_error_handler, sqlite_connection, parse_metadata_json
+from services.config_service import config
 
 logger = logging.getLogger(__name__)
 
@@ -18,49 +18,6 @@ class PromptCache:
         self.db_path = db_path
         self.ttl_hours = ttl_hours
         self._init_database()
-
-    def _get_redis_client(self):
-        """Get Redis client with password authentication"""
-        password = os.environ.get('REDIS_PASSWORD', '')
-        kwargs = {
-            'host': os.environ['REDIS_HOST'],
-            'port': 6379,
-            'db': 1,
-            'decode_responses': True
-        }
-        if password:
-            kwargs['password'] = password
-        return redis.Redis(**kwargs)
-
-    def _get_redis_bool(self, key, default=True):
-        """Get boolean value from Redis (stored as '1'/'0')"""
-        r = self._get_redis_client()
-        value = r.get(key)
-        return value == '1' if value is not None else default
-
-    def _set_redis_bool(self, key, value):
-        """Set boolean value in Redis (stored as '1'/'0')"""
-        r = self._get_redis_client()
-        r.set(key, '1' if value else '0')
-        return value
-
-    def _get_redis_string(self, key, default=None):
-        """Get string value from Redis"""
-        r = self._get_redis_client()
-        value = r.get(key)
-        return value if value else default
-
-    def _set_redis_string(self, key, value):
-        """Set string value in Redis"""
-        r = self._get_redis_client()
-        r.set(key, value)
-        return value
-
-    def _get_redis_float(self, key, default=None):
-        """Get float value from Redis"""
-        r = self._get_redis_client()
-        value = r.get(key)
-        return float(value) if value else default
 
     def _init_database(self):
         with sqlite_connection(self.db_path) as (conn, cursor):
@@ -88,8 +45,8 @@ class PromptCache:
             ''')
 
     def _hash_prompt(self, prompt, operation_type, model=None, model_aware_cache=None):
-        # Use provided model_aware_cache setting, or fall back to Redis setting
-        use_model_aware = model_aware_cache if model_aware_cache is not None else self.is_model_aware_cache()
+        # Use provided model_aware_cache setting, or fall back to config setting
+        use_model_aware = model_aware_cache if model_aware_cache is not None else config.is_model_aware_cache()
 
         # Only include model in hash if model_aware_cache is enabled
         if use_model_aware:
@@ -101,8 +58,8 @@ class PromptCache:
         return hashlib.sha256(content.encode()).hexdigest()
 
     def get(self, prompt, operation_type, model=None, use_cache=None, model_aware_cache=None, metadata=None):
-        # Use provided use_cache setting, or fall back to Redis setting
-        should_use_cache = use_cache if use_cache is not None else self.is_enabled()
+        # Use provided use_cache setting, or fall back to config setting
+        should_use_cache = use_cache if use_cache is not None else config.is_cache_enabled()
 
         if not should_use_cache:
             return None
@@ -138,8 +95,8 @@ class PromptCache:
         return semantic_result
 
     def set(self, prompt, operation_type, response_text, metadata=None, model=None, use_cache=None, model_aware_cache=None):
-        # Use provided use_cache setting, or fall back to Redis setting
-        should_use_cache = use_cache if use_cache is not None else self.is_enabled()
+        # Use provided use_cache setting, or fall back to config setting
+        should_use_cache = use_cache if use_cache is not None else config.is_cache_enabled()
 
         if not should_use_cache:
             return
@@ -205,51 +162,46 @@ class PromptCache:
             'avg_accesses_per_entry': round(stats[2], 2) if stats[2] else 0,
             'operation_breakdown': operation_breakdown,
             'ttl_hours': self.ttl_hours,
-            'enabled': self.is_enabled(),
-            'model_aware_cache': self.is_model_aware_cache(),
-            'semantic_cache_enabled': self.is_semantic_cache_enabled()
+            'enabled': config.is_cache_enabled(),
+            'model_aware_cache': config.is_model_aware_cache(),
+            'semantic_cache_enabled': config.is_semantic_cache_enabled()
         }
 
     def set_enabled(self, enabled):
-        """Store cache enabled state in Redis (shared across all containers)"""
-        return self._set_redis_bool('cache_enabled', enabled)
+        """Store cache enabled state"""
+        return config.set_cache_enabled(enabled)
 
-    @cache_error_handler(default_value=True)
     def is_enabled(self):
-        """Read cache enabled state from Redis (shared across all containers)"""
-        return self._get_redis_bool('cache_enabled', default=True)
+        """Read cache enabled state"""
+        return config.is_cache_enabled()
 
     def set_model_aware_cache(self, model_aware):
-        """Store model-aware cache state in Redis (shared across all containers)"""
-        return self._set_redis_bool('model_aware_cache', model_aware)
+        """Store model-aware cache state"""
+        return config.set_model_aware_cache(model_aware)
 
-    @cache_error_handler(default_value=True)
     def is_model_aware_cache(self):
-        """Read model-aware cache state from Redis (shared across all containers)"""
-        return self._get_redis_bool('model_aware_cache', default=True)
+        """Read model-aware cache state"""
+        return config.is_model_aware_cache()
 
     def set_current_model(self, model):
-        """Store current model in Redis (shared across all containers)"""
-        return self._set_redis_string('current_model', model)
+        """Store current model"""
+        return config.set_current_model(model)
 
-    @cache_error_handler(default_value='gemini-2.5-flash')
     def get_current_model(self):
-        """Read current model from Redis (shared across all containers)"""
-        return self._get_redis_string('current_model', default='gemini-2.5-flash')
+        """Read current model"""
+        return config.get_current_model()
 
     def set_semantic_cache_enabled(self, enabled):
-        """Store semantic cache enabled state in Redis (shared across all containers)"""
-        return self._set_redis_bool('semantic_cache_enabled', enabled)
+        """Store semantic cache enabled state"""
+        return config.set_semantic_cache_enabled(enabled)
 
-    @cache_error_handler(default_value=False)
     def is_semantic_cache_enabled(self):
-        """Read semantic cache enabled state from Redis (shared across all containers)"""
-        return self._get_redis_bool('semantic_cache_enabled', default=False)
+        """Read semantic cache enabled state"""
+        return config.is_semantic_cache_enabled()
 
-    @cache_error_handler(default_value=0.95)
     def get_semantic_similarity_threshold(self):
-        """Get semantic similarity threshold from Redis (default 0.95)"""
-        return self._get_redis_float('semantic_similarity_threshold', default=0.95)
+        """Get semantic similarity threshold"""
+        return config.get_semantic_similarity_threshold()
 
     def _find_similar_prompt(self, prompt, operation_type, model=None, model_aware_cache=None, metadata=None):
         """Find similar cached prompt using semantic search (TF-IDF + cosine similarity)
@@ -257,11 +209,11 @@ class PromptCache:
         Only compares against cached entries with matching metadata fields.
         This ensures semantic cache only matches similar prompts for the SAME problem/context.
         """
-        if not self.is_semantic_cache_enabled():
+        if not config.is_semantic_cache_enabled():
             return None
 
-        use_model_aware = model_aware_cache if model_aware_cache is not None else self.is_model_aware_cache()
-        threshold = self.get_semantic_similarity_threshold()
+        use_model_aware = model_aware_cache if model_aware_cache is not None else config.is_model_aware_cache()
+        threshold = config.get_semantic_similarity_threshold()
 
         expiry_time = datetime.utcnow() - timedelta(hours=self.ttl_hours)
 

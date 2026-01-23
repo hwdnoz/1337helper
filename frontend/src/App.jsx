@@ -11,6 +11,7 @@ import Header from './components/app/Header'
 import LeetCodeInput from './components/app/LeetCodeInput'
 import OutputPanel from './components/app/OutputPanel'
 import AppSidebar from './components/app/sidebar/AppSidebar'
+import Spinner from './components/ui/Spinner'
 
 // Lazy load heavy CodeMirror component
 const CodeEditorPanel = lazy(() => import('./components/app/CodeEditorPanel'))
@@ -26,6 +27,13 @@ function App() {
     vimEnabled: true,
     showPromptDiff: false,
     showRagChunks: false
+  })
+
+  // Loading states for LLM API requests
+  const [loading, setLoading] = useState({
+    leetcode: false,
+    codeModification: false,
+    testCases: false
   })
 
   // Editor/Content state (all editable content)
@@ -170,6 +178,7 @@ function App() {
   }
 
   const applyLlmPrompt = async () => {
+    setLoading(prev => ({ ...prev, codeModification: true }))
     try {
       const res = await fetch(`${API_URL}/api/jobs/code-modification`, {
         method: 'POST',
@@ -178,12 +187,33 @@ function App() {
       })
       const data = await res.json()
 
-      if (data.job_id) {
-        startJob(data.job_id, 'LLM')
+      if (data.success && data.result) {
+        // Handle synchronous response
+        if (data.result.code) {
+          setContent(prev => ({ ...prev, code: data.result.code }))
+        }
+
+        setMetadata(prev => ({
+          ...prev,
+          lastUpdate: new Date(),
+          cacheHit: data.result.from_cache || false,
+          semanticCacheHit: data.result.semantic_cache_hit || false,
+          similarityScore: data.result.similarity_score || null,
+          cachedPrompt: data.result.cached_prompt || null,
+          currentPrompt: data.result.current_prompt || null,
+          ragDocCount: data.result.rag_doc_count || 0,
+          ragChunks: data.result.rag_chunks || [],
+          tokensSent: data.result.tokens_sent || 0,
+          tokensReceived: data.result.tokens_received || 0
+        }))
+      } else if (data.error) {
+        alert(`Error: ${data.error}`)
       }
     } catch (error) {
       console.error('Fetch Error:', error)
       alert(`Failed to connect to server: ${error.message}`)
+    } finally {
+      setLoading(prev => ({ ...prev, codeModification: false }))
     }
   }
 
@@ -205,6 +235,7 @@ function App() {
 
   const solveLeetcode = async () => {
     setUi(prev => ({ ...prev, sidebarOpen: false }))
+    setLoading(prev => ({ ...prev, leetcode: true }))
     try {
       const res = await fetch(`${API_URL}/api/jobs/leetcode`, {
         method: 'POST',
@@ -216,16 +247,38 @@ function App() {
       })
       const data = await res.json()
 
-      if (data.job_id) {
-        startJob(data.job_id, content.leetcodeNumber)
+      if (data.success && data.result) {
+        // Handle synchronous response
+        if (data.result.response) {
+          setContent(prev => ({ ...prev, code: data.result.response }))
+        }
+
+        setMetadata(prev => ({
+          ...prev,
+          lastUpdate: new Date(),
+          cacheHit: data.result.from_cache || false,
+          semanticCacheHit: data.result.semantic_cache_hit || false,
+          similarityScore: data.result.similarity_score || null,
+          cachedPrompt: data.result.cached_prompt || null,
+          currentPrompt: data.result.current_prompt || null,
+          ragDocCount: data.result.rag_doc_count || 0,
+          ragChunks: data.result.rag_chunks || [],
+          tokensSent: data.result.tokens_sent || 0,
+          tokensReceived: data.result.tokens_received || 0
+        }))
+      } else if (data.error) {
+        alert(`Error: ${data.error}`)
       }
     } catch (error) {
       console.error('Fetch Error:', error)
       alert(`Failed to connect to server: ${error.message}`)
+    } finally {
+      setLoading(prev => ({ ...prev, leetcode: false }))
     }
   }
 
   const generateTestCases = async () => {
+    setLoading(prev => ({ ...prev, testCases: true }))
     try {
       const res = await fetch(`${API_URL}/api/jobs/test-cases`, {
         method: 'POST',
@@ -234,12 +287,24 @@ function App() {
       })
       const data = await res.json()
 
-      if (data.job_id) {
-        startJob(data.job_id, 'Tests')
+      if (data.success && data.result) {
+        // Handle synchronous response
+        if (data.result.test_cases) {
+          setContent(prev => ({ ...prev, testCase: data.result.test_cases }))
+          setMetadata(prev => ({
+            ...prev,
+            testCaseLastUpdate: new Date(),
+            testCaseCacheHit: data.result.from_cache || false
+          }))
+        }
+      } else if (data.error) {
+        alert(`Error: ${data.error}`)
       }
     } catch (error) {
       console.error('Fetch Error:', error)
       alert(`Failed to connect to server: ${error.message}`)
+    } finally {
+      setLoading(prev => ({ ...prev, testCases: false }))
     }
   }
 
@@ -281,6 +346,14 @@ function App() {
             runCode={runCode}
             importTestCase={importTestCase}
             clearTestCases={clearTestCases}
+            isLoading={loading.leetcode || loading.codeModification}
+            loadingMessage={
+              loading.leetcode
+                ? 'Generating LeetCode solution...'
+                : loading.codeModification
+                ? 'Applying code modifications...'
+                : 'Processing...'
+            }
           />
         </Suspense>
         <OutputPanel output={content.output} outputRef={outputRef} />
@@ -307,6 +380,7 @@ function App() {
         resetPromptToDefault={resetPromptToDefault}
         solveLeetcode={solveLeetcode}
         startJob={startJob}
+        loading={loading}
       />
     </div>
   )

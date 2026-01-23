@@ -1,7 +1,8 @@
 function LLMPromptPanel({
   content,
   setContent,
-  applyLlmPrompt
+  applyLlmPrompt,
+  isLoading = false
 }) {
   return (
     <>
@@ -16,13 +17,14 @@ function LLMPromptPanel({
             value={content.llmPrompt}
             onChange={e => setContent(prev => ({ ...prev, llmPrompt: e.target.value }))}
             placeholder="E.g., 'Add error handling', 'Optimize for performance', 'Add type hints'..."
-            style={{ minHeight: '400px' }}
+            style={{ minHeight: '400px', opacity: isLoading ? 0.5 : 1 }}
+            disabled={isLoading}
           />
         </div>
       </div>
       <div className="sidebar-footer">
-        <button onClick={applyLlmPrompt}>
-          Apply Prompt
+        <button onClick={applyLlmPrompt} disabled={isLoading}>
+          {isLoading ? 'Applying...' : 'Apply Prompt'}
         </button>
       </div>
     </>

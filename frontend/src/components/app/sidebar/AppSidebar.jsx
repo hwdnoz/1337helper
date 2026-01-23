@@ -22,7 +22,8 @@ function AppSidebar({
   applyPreset,
   resetPromptToDefault,
   solveLeetcode,
-  startJob
+  startJob,
+  loading = { leetcode: false, codeModification: false, testCases: false }
 }) {
   return (
     <>
@@ -56,6 +57,7 @@ function AppSidebar({
             importTestCase={importTestCase}
             clearTestCases={clearTestCases}
             startJob={startJob}
+            isLoading={loading.testCases}
           />
         )}
 
@@ -65,6 +67,7 @@ function AppSidebar({
             setContent={setContent}
             applyLlmPrompt={applyLlmPrompt}
             startJob={startJob}
+            isLoading={loading.codeModification}
           />
         )}
 
@@ -83,6 +86,7 @@ function AppSidebar({
             solveLeetcode={solveLeetcode}
             setUi={setUi}
             startJob={startJob}
+            isLoading={loading.leetcode}
           />
         )}
       </div>

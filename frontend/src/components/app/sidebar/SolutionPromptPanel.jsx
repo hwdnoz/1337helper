@@ -10,7 +10,8 @@ function SolutionPromptPanel({
   applyPreset,
   resetPromptToDefault,
   solveLeetcode,
-  setUi
+  setUi,
+  isLoading = false
 }) {
   const presets = [
     { id: 'no-comments', label: 'No Comments' },
@@ -69,10 +70,12 @@ function SolutionPromptPanel({
         </div>
       </div>
       <div className="sidebar-footer">
-        <button onClick={() => setUi(prev => ({ ...prev, sidebarOpen: false }))} style={{ background: '#555' }}>
+        <button onClick={() => setUi(prev => ({ ...prev, sidebarOpen: false }))} style={{ background: '#555' }} disabled={isLoading}>
           Cancel
         </button>
-        <button onClick={solveLeetcode}>Solve Problem</button>
+        <button onClick={solveLeetcode} disabled={isLoading}>
+          {isLoading ? 'Solving...' : 'Solve Problem'}
+        </button>
       </div>
     </>
   )

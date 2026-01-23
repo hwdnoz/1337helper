@@ -36,10 +36,17 @@ button {
   padding: 0.5rem 2rem;
   cursor: pointer;
   margin-bottom: 0.5rem;
+  transition: background 0.2s ease, opacity 0.2s ease;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   background: #1177bb;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #0e639c;
 }
 
 
