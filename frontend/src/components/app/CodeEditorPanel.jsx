@@ -2,6 +2,7 @@ import CodeMirror from '@uiw/react-codemirror'
 import { python } from '@codemirror/lang-python'
 import { vim } from '@replit/codemirror-vim'
 import ResponseMetadata from './ResponseMetadata'
+import Spinner from '../ui/Spinner'
 
 function CodeEditorPanel({
   content,
@@ -12,7 +13,9 @@ function CodeEditorPanel({
   setMetadata,
   runCode,
   importTestCase,
-  clearTestCases
+  clearTestCases,
+  isLoading = false,
+  loadingMessage = 'Processing request...'
 }) {
   return (
     <div style={{ flex: '2', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
@@ -38,7 +41,8 @@ function CodeEditorPanel({
         setUi={setUi}
       />
 
-      <div style={{ flex: 1, minHeight: 0 }}>
+      <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+        {isLoading && <Spinner message={loadingMessage} overlay={true} />}
         <CodeMirror
           value={content.code}
           onChange={(val) => setContent(prev => ({ ...prev, code: val }))}

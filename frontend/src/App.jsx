@@ -11,6 +11,7 @@ import Header from './components/app/Header'
 import LeetCodeInput from './components/app/LeetCodeInput'
 import OutputPanel from './components/app/OutputPanel'
 import AppSidebar from './components/app/sidebar/AppSidebar'
+import Spinner from './components/ui/Spinner'
 
 // Lazy load heavy CodeMirror component
 const CodeEditorPanel = lazy(() => import('./components/app/CodeEditorPanel'))
@@ -26,6 +27,13 @@ function App() {
     vimEnabled: true,
     showPromptDiff: false,
     showRagChunks: false
+  })
+
+  // Loading states for LLM API requests
+  const [loading, setLoading] = useState({
+    leetcode: false,
+    codeModification: false,
+    testCases: false
   })
 
   // Editor/Content state (all editable content)
@@ -170,6 +178,7 @@ function App() {
   }
 
   const applyLlmPrompt = async () => {
+    setLoading(prev => ({ ...prev, codeModification: true }))
     try {
       const res = await fetch(`${API_URL}/api/jobs/code-modification`, {
         method: 'POST',
@@ -203,6 +212,8 @@ function App() {
     } catch (error) {
       console.error('Fetch Error:', error)
       alert(`Failed to connect to server: ${error.message}`)
+    } finally {
+      setLoading(prev => ({ ...prev, codeModification: false }))
     }
   }
 
@@ -224,6 +235,7 @@ function App() {
 
   const solveLeetcode = async () => {
     setUi(prev => ({ ...prev, sidebarOpen: false }))
+    setLoading(prev => ({ ...prev, leetcode: true }))
     try {
       const res = await fetch(`${API_URL}/api/jobs/leetcode`, {
         method: 'POST',
@@ -260,10 +272,13 @@ function App() {
     } catch (error) {
       console.error('Fetch Error:', error)
       alert(`Failed to connect to server: ${error.message}`)
+    } finally {
+      setLoading(prev => ({ ...prev, leetcode: false }))
     }
   }
 
   const generateTestCases = async () => {
+    setLoading(prev => ({ ...prev, testCases: true }))
     try {
       const res = await fetch(`${API_URL}/api/jobs/test-cases`, {
         method: 'POST',
@@ -288,6 +303,8 @@ function App() {
     } catch (error) {
       console.error('Fetch Error:', error)
       alert(`Failed to connect to server: ${error.message}`)
+    } finally {
+      setLoading(prev => ({ ...prev, testCases: false }))
     }
   }
 
@@ -329,6 +346,14 @@ function App() {
             runCode={runCode}
             importTestCase={importTestCase}
             clearTestCases={clearTestCases}
+            isLoading={loading.leetcode || loading.codeModification}
+            loadingMessage={
+              loading.leetcode
+                ? 'Generating LeetCode solution...'
+                : loading.codeModification
+                ? 'Applying code modifications...'
+                : 'Processing...'
+            }
           />
         </Suspense>
         <OutputPanel output={content.output} outputRef={outputRef} />
@@ -355,6 +380,7 @@ function App() {
         resetPromptToDefault={resetPromptToDefault}
         solveLeetcode={solveLeetcode}
         startJob={startJob}
+        loading={loading}
       />
     </div>
   )
