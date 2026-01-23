@@ -1,5 +1,6 @@
 """
-Simple in-memory configuration service to replace Redis state management.
+Simple in-memory configuration service
+
 This provides a single source of truth for application configuration without external dependencies.
 """
 import logging

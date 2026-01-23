@@ -1,6 +1,5 @@
 """
-Synchronous LLM service that integrates the core logic from Celery tasks.
-This replaces the distributed task processing with direct function calls.
+Synchronous LLM service 
 """
 import os
 import time
