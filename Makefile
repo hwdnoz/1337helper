@@ -26,9 +26,6 @@ help:
 	@echo "  make docker-stop    - Stop individual Docker containers"
 
 local:
-	@echo "Checking dependencies..."
-	@test -f .env || (echo "❌  .env file not found." && exit 1)
-	@test -n "$(GOOGLE_API_KEY)" || (echo "❌  GOOGLE_API_KEY not set in .env" && exit 1)
 	@echo "Starting local services..."
 	@cd backend-python && ./venv/bin/python3 app.py & \
 	 cd frontend && npm run dev
@@ -48,11 +45,6 @@ down:
 
 logs:
 	@docker compose logs -f
-
-
-docker-stop:
-	@docker stop 1337helper-backend 2>/dev/null || true
-	@docker stop 1337helper-frontend 2>/dev/null || true
 
 test:
 	@echo "Running pytest unit tests..."

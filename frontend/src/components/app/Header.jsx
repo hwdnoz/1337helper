@@ -1,4 +1,4 @@
-function Header({ ui, toggleSidebar, navigate }) {
+function Header({ ui, toggleSidebar, navigate, onOpenSettings, hasApiKey }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
       <h1 style={{ margin: 0 }}>Code Runner</h1>
@@ -24,6 +24,13 @@ function Header({ ui, toggleSidebar, navigate }) {
         </button>
         <button className="sidebar-toggle-btn" onClick={() => navigate('/admin')}>
           Admin
+        </button>
+        <button
+          className={`sidebar-toggle-btn ${hasApiKey ? 'api-key-set' : 'api-key-missing'}`}
+          onClick={onOpenSettings}
+          title={hasApiKey ? 'API Key Set - Click to manage' : 'No API Key - Click to set'}
+        >
+          {hasApiKey ? '🔑' : '⚠️'} Settings
         </button>
       </div>
     </div>

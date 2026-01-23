@@ -1,13 +1,9 @@
 import io
-import os
 from contextlib import redirect_stdout
 from flask import Blueprint, request, jsonify
 from google import genai
 
 code_bp = Blueprint('code', __name__)
-
-# Configure Google AI
-client = genai.Client(api_key=os.getenv('GOOGLE_API_KEY'))
 
 @code_bp.route('/api/code', methods=['GET'])
 def get_code():
@@ -27,6 +23,13 @@ def run_code():
 @code_bp.route('/api/available-models', methods=['GET'])
 def list_models():
     try:
+        # Extract API key from query params or headers
+        api_key = request.args.get('google_api_key') or request.headers.get('X-Google-API-Key')
+
+        if not api_key:
+            return jsonify({'success': False, 'error': 'No Google API key provided'}), 400
+
+        client = genai.Client(api_key=api_key)
         models = client.models.list()
         model_names = [model.name for model in models]
         return jsonify({'success': True, 'models': model_names})
