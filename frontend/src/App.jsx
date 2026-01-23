@@ -178,8 +178,27 @@ function App() {
       })
       const data = await res.json()
 
-      if (data.job_id) {
-        startJob(data.job_id, 'LLM')
+      if (data.success && data.result) {
+        // Handle synchronous response
+        if (data.result.code) {
+          setContent(prev => ({ ...prev, code: data.result.code }))
+        }
+
+        setMetadata(prev => ({
+          ...prev,
+          lastUpdate: new Date(),
+          cacheHit: data.result.from_cache || false,
+          semanticCacheHit: data.result.semantic_cache_hit || false,
+          similarityScore: data.result.similarity_score || null,
+          cachedPrompt: data.result.cached_prompt || null,
+          currentPrompt: data.result.current_prompt || null,
+          ragDocCount: data.result.rag_doc_count || 0,
+          ragChunks: data.result.rag_chunks || [],
+          tokensSent: data.result.tokens_sent || 0,
+          tokensReceived: data.result.tokens_received || 0
+        }))
+      } else if (data.error) {
+        alert(`Error: ${data.error}`)
       }
     } catch (error) {
       console.error('Fetch Error:', error)
@@ -216,8 +235,27 @@ function App() {
       })
       const data = await res.json()
 
-      if (data.job_id) {
-        startJob(data.job_id, content.leetcodeNumber)
+      if (data.success && data.result) {
+        // Handle synchronous response
+        if (data.result.response) {
+          setContent(prev => ({ ...prev, code: data.result.response }))
+        }
+
+        setMetadata(prev => ({
+          ...prev,
+          lastUpdate: new Date(),
+          cacheHit: data.result.from_cache || false,
+          semanticCacheHit: data.result.semantic_cache_hit || false,
+          similarityScore: data.result.similarity_score || null,
+          cachedPrompt: data.result.cached_prompt || null,
+          currentPrompt: data.result.current_prompt || null,
+          ragDocCount: data.result.rag_doc_count || 0,
+          ragChunks: data.result.rag_chunks || [],
+          tokensSent: data.result.tokens_sent || 0,
+          tokensReceived: data.result.tokens_received || 0
+        }))
+      } else if (data.error) {
+        alert(`Error: ${data.error}`)
       }
     } catch (error) {
       console.error('Fetch Error:', error)
@@ -234,8 +272,18 @@ function App() {
       })
       const data = await res.json()
 
-      if (data.job_id) {
-        startJob(data.job_id, 'Tests')
+      if (data.success && data.result) {
+        // Handle synchronous response
+        if (data.result.test_cases) {
+          setContent(prev => ({ ...prev, testCase: data.result.test_cases }))
+          setMetadata(prev => ({
+            ...prev,
+            testCaseLastUpdate: new Date(),
+            testCaseCacheHit: data.result.from_cache || false
+          }))
+        }
+      } else if (data.error) {
+        alert(`Error: ${data.error}`)
       }
     } catch (error) {
       console.error('Fetch Error:', error)

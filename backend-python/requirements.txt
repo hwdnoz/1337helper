@@ -19,8 +19,6 @@ Werkzeug==3.1.4
 zipp==3.23.0
 python-dotenv==1.0.0
 google-genai
-celery==5.4.0
-redis==5.0.1
 scikit-learn>=1.6.0
 numpy>=2.0.0
 pytest==7.4.3

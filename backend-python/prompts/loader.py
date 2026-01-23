@@ -1,5 +1,4 @@
 import os
-import redis
 
 class PromptLoader:
     def __init__(self, defaults_dir=None):
@@ -9,19 +8,7 @@ class PromptLoader:
             defaults_dir = os.path.join(current_dir, 'defaults')
         self.defaults_dir = defaults_dir
         self._file_cache = {}
-
-    def _get_redis_client(self):
-        """Get Redis client with password authentication"""
-        password = os.environ.get('REDIS_PASSWORD', '')
-        kwargs = {
-            'host': os.environ['REDIS_HOST'],
-            'port': 6379,
-            'db': 1,
-            'decode_responses': True
-        }
-        if password:
-            kwargs['password'] = password
-        return redis.Redis(**kwargs)
+        self._edited_prompts = {}  # In-memory storage for edited prompts
 
     def _load_default(self, prompt_name):
         """Load default prompt from file, with caching"""
@@ -33,19 +20,12 @@ class PromptLoader:
 
     def get(self, prompt_name, **kwargs):
         """
-        Get prompt, checking Redis first, then falling back to default file.
+        Get prompt, checking in-memory storage first, then falling back to default file.
         Format with provided kwargs.
         """
-        try:
-            # Check Redis for edited version
-            r = self._get_redis_client()
-            edited = r.get(f'prompt:{prompt_name}')
-
-            if edited:
-                return edited.format(**kwargs)
-        except Exception:
-            # If Redis fails, continue to default
-            pass
+        # Check in-memory storage for edited version
+        if prompt_name in self._edited_prompts:
+            return self._edited_prompts[prompt_name].format(**kwargs)
 
         # Fallback to default file
         default = self._load_default(prompt_name)
@@ -53,30 +33,23 @@ class PromptLoader:
 
     def get_raw(self, prompt_name):
         """Get raw prompt without formatting (for admin UI)"""
-        try:
-            # Check Redis for edited version
-            r = self._get_redis_client()
-            edited = r.get(f'prompt:{prompt_name}')
-
-            if edited:
-                return {'content': edited, 'is_edited': True, 'source': 'redis'}
-        except Exception:
-            pass
+        # Check in-memory storage for edited version
+        if prompt_name in self._edited_prompts:
+            return {'content': self._edited_prompts[prompt_name], 'is_edited': True, 'source': 'memory'}
 
         # Fallback to default file
         default = self._load_default(prompt_name)
         return {'content': default, 'is_edited': False, 'source': 'default'}
 
     def set(self, prompt_name, content):
-        """Save edited prompt to Redis"""
-        r = self._get_redis_client()
-        r.set(f'prompt:{prompt_name}', content)
+        """Save edited prompt to in-memory storage"""
+        self._edited_prompts[prompt_name] = content
         return content
 
     def reset(self, prompt_name):
-        """Reset prompt to default by deleting from Redis"""
-        r = self._get_redis_client()
-        r.delete(f'prompt:{prompt_name}')
+        """Reset prompt to default by removing from in-memory storage"""
+        if prompt_name in self._edited_prompts:
+            del self._edited_prompts[prompt_name]
         return self._load_default(prompt_name)
 
     def list_all(self):
